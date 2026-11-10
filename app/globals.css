@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-white text-ink antialiased; line-height: 1.5; }
+  :focus-visible { outline: 3px solid #E8A317; outline-offset: 2px; }
+}
