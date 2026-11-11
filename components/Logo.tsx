@@ -1,6 +1,6 @@
 type Props = { size?: number; showText?: boolean };
 
-/** Apki Bari logo: a clinic whose roof is a stethoscope. */
+/** Clinically logo: a clinic whose roof is a stethoscope. */
 export default function Logo({ size = 40, showText = true }: Props) {
   return (
     <span className="inline-flex items-center gap-2.5">
@@ -17,8 +17,7 @@ export default function Logo({ size = 40, showText = true }: Props) {
       </svg>
       {showText && (
         <span className="leading-tight">
-          <span className="block text-xl font-bold tracking-tight text-ink">Apki Bari</span>
-          <span className="block font-[Mukta] text-sm text-muted">आपकी बारी</span>
+          <span className="block text-xl font-bold tracking-tight text-ink">Clinically</span>
         </span>
       )}
     </span>

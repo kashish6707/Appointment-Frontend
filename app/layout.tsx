@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Apki Bari",
+  title: "Clinically",
   description: "Find the right doctor in Patna and book your token from home.",
 };
 

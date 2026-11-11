@@ -98,7 +98,7 @@ export default function DoctorRegisterPage() {
             ))}
           </ul>
         </div>
-        <p className="text-sm text-muted">Apki Bari only manages bookings and queues. It never stores diagnoses or prescriptions.</p>
+        <p className="text-sm text-muted">Clinically only manages bookings and queues. It never stores diagnoses or prescriptions.</p>
       </aside>
 
       <main className="mx-auto w-full max-w-lg px-5 py-8 sm:py-12 lg:flex lg:flex-col lg:justify-center">

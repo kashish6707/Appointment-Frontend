@@ -1,6 +1,6 @@
 import type { Config } from "tailwindcss";
 
-// Apki Bari brand: white background with green touches.
+// Clinically brand: white background with green touches.
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
