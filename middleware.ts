@@ -16,4 +16,4 @@ export function middleware(req: NextRequest) {
 }
 
 // Signed-in doctor pages. Add new ones here.
-export const config = { matcher: ["/doctor/dashboard/:path*"] };
+export const config = { matcher: ["/doctor/dashboard/:path*", "/doctor/staff/:path*", "/doctor/schedule/:path*", "/doctor/profile/:path*"] };

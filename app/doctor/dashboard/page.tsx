@@ -1,24 +1,18 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import Logo from "@/components/Logo";
-import { getCurrentDoctor } from "@/lib/session";
-import LogoutButton from "./LogoutButton";
+import { getMe } from "@/lib/session";
+import DashboardApp from "./DashboardApp";
+import WorkplacePicker from "./WorkplacePicker";
 
-// Placeholder dashboard: proves the session works end to end. The OPD queue comes next.
-export default async function DoctorDashboard() {
-  const doctor = await getCurrentDoctor();
-  // Cookie present but the backend rejected it (expired or signed out elsewhere).
-  if (!doctor) redirect("/doctor/login?next=/doctor/dashboard");
+export const metadata: Metadata = { title: "Dashboard · Clinically" };
 
-  return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col gap-8 px-5 py-8 sm:py-12">
-      <header className="flex items-center justify-between">
-        <Logo size={36} />
-        <LogoutButton />
-      </header>
-      <div>
-        <h1 className="text-[28px] font-bold leading-tight tracking-tight">Welcome, {doctor.fullName}</h1>
-        <p className="mt-2 text-muted">Your clinic and OPD timings will be set up here next.</p>
-      </div>
-    </main>
-  );
+export default async function DoctorDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  // middleware.ts already sent visitors without a cookie to sign in; this catches expired sessions.
+  const me = await getMe();
+  if (!me) redirect("/doctor/login?next=/doctor/dashboard");
+  // A staff member who works for several doctors (or none any more) chooses first.
+  if (!me.doctor) return <WorkplacePicker me={me} />;
+  // "Switch doctor" from the top bar.
+  if ((await searchParams).switch !== undefined && me.workplaces.length > 1) return <WorkplacePicker me={me} current={me.doctor.id} />;
+  return <DashboardApp me={me} doctor={me.doctor} />;
 }

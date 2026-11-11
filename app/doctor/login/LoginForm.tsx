@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/Button";
 import TextField from "@/components/TextField";
 import { isEmail, isIndianMobile } from "@/lib/validation";
-import { ApiError, loginDoctor } from "@/lib/api";
+import { ApiError, signIn } from "@/lib/api";
 
 type Method = "phone" | "email";
 type Errors = Partial<Record<"phone" | "email" | "password", string>>;
@@ -41,7 +41,7 @@ export default function LoginForm({ next }: { next: string }) {
     }
     setLoading(true);
     try {
-      await loginDoctor({
+      await signIn({
         method,
         ...(method === "phone" ? { phone } : { email: email.trim().toLowerCase() }),
         password,

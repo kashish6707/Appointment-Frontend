@@ -7,6 +7,8 @@ import Button from "@/components/Button";
 import TextField from "@/components/TextField";
 import { isEmail, isIndianMobile, isStrongPassword, passwordRules } from "@/lib/validation";
 import { ApiError, registerDoctor } from "@/lib/api";
+import ProfileFields, { emptyDraft, toInput, validateDraft, type ProfileDraft, type ProfileErrors } from "@/components/ProfileFields";
+import { t } from "@/lib/strings";
 
 type Method = "phone" | "email";
 type Errors = Partial<Record<"fullName" | "phone" | "email" | "password" | "confirm" | "terms", string>>;
@@ -30,26 +32,43 @@ export default function DoctorRegisterPage() {
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  // Step 1: the account. Step 2: professional details. Nothing is created until step 2 is sent.
+  const [step, setStep] = useState<1 | 2>(1);
+  const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
+  const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
 
-  function validate(): Errors {
+  function validateAccount(): Errors {
     const e: Errors = {};
     if (fullName.trim().length < 3) e.fullName = "Enter your full name, for example Dr. Rajeev Anand.";
     if (method === "phone" && !isIndianMobile(phone)) e.phone = "Enter a 10-digit mobile number starting with 6, 7, 8 or 9.";
     if (method === "email" && !isEmail(email.trim())) e.email = "Enter a valid email address, like name@example.com.";
     if (!isStrongPassword(password)) e.password = "Your password needs at least 8 characters, with a letter and a number.";
     if (confirm !== password || !confirm) e.confirm = "Both passwords must match.";
-    if (!terms) e.terms = "Please accept the terms to create your account.";
     return e;
+  }
+
+  function goToProfile(ev: FormEvent) {
+    ev.preventDefault();
+    const e = validateAccount();
+    setErrors(e);
+    if (Object.keys(e).length) {
+      document.getElementById(Object.keys(e)[0])?.focus();
+      return;
+    }
+    setStep(2);
+    window.scrollTo({ top: 0 });
   }
 
   async function onSubmit(ev: FormEvent) {
     ev.preventDefault();
     setServerError("");
-    const e = validate();
-    setErrors(e);
-    if (Object.keys(e).length) {
-      const first = Object.keys(e)[0];
-      document.getElementById(first === "terms" ? "terms" : first)?.focus();
+    const pe = validateDraft(draft, true);
+    setProfileErrors(pe);
+    const termsError = terms ? undefined : "Please accept the terms to create your account.";
+    setErrors((e) => ({ ...e, terms: termsError }));
+    const first = Object.keys(pe)[0] ?? (termsError ? "terms" : null);
+    if (first) {
+      document.getElementById(first)?.focus();
       return;
     }
     setLoading(true);
@@ -59,6 +78,7 @@ export default function DoctorRegisterPage() {
         method,
         ...(method === "phone" ? { phone } : { email: email.trim().toLowerCase() }),
         password,
+        profile: toInput(draft),
       });
       setDone(true);
     } catch (err) {
@@ -127,10 +147,33 @@ export default function DoctorRegisterPage() {
           </section>
         ) : (
           <>
-            <h1 className="text-[28px] font-bold leading-tight tracking-tight">Create your doctor account</h1>
-            <p className="mt-2 text-muted">Use your mobile number or email. It takes about a minute.</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-brand">{t.profile.step(step, 2)}</p>
+            {step === 2 ? (
+              <>
+                <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight">{t.profile.stepProfile}</h1>
+                <p className="mt-2 text-muted">{t.profile.profileIntro}</p>
+                <form onSubmit={onSubmit} noValidate className="mt-8 space-y-6">
+                  <ProfileFields draft={draft} onChange={setDraft} errors={profileErrors} />
+                  <TermsBox terms={terms} setTerms={setTerms} error={errors.terms} />
+                  {serverError && (
+                    <p role="alert" className="rounded-xl border-[1.5px] border-danger bg-danger-light px-4 py-3 font-medium text-danger">
+                      {serverError}
+                    </p>
+                  )}
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                    <Button type="button" variant="ghost" onClick={() => { setStep(1); setServerError(""); }} className="sm:w-auto">
+                      {t.profile.back}
+                    </Button>
+                    <Button type="submit" loading={loading}>{loading ? t.profile.creating : t.profile.create}</Button>
+                  </div>
+                </form>
+              </>
+            ) : (
+            <>
+            <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight">Create your doctor account</h1>
+            <p className="mt-2 text-muted">Use your mobile number or email. Next, you’ll add your professional details.</p>
 
-            <form onSubmit={onSubmit} noValidate className="mt-8 space-y-5">
+            <form onSubmit={goToProfile} noValidate className="mt-8 space-y-5">
               <TextField
                 id="fullName"
                 label="Full name"
@@ -243,40 +286,7 @@ export default function DoctorRegisterPage() {
                 error={errors.confirm}
               />
 
-              <div>
-                <label className="flex items-start gap-3">
-                  <input
-                    id="terms"
-                    type="checkbox"
-                    checked={terms}
-                    onChange={(e) => setTerms(e.target.checked)}
-                    className="mt-1 h-5 w-5 shrink-0 accent-brand"
-                    aria-invalid={errors.terms ? true : undefined}
-                    aria-describedby={errors.terms ? "terms-error" : undefined}
-                  />
-                  <span className="text-[15px] text-ink">
-                    I agree to the{" "}
-                    <a href="#" className="font-semibold text-brand underline underline-offset-4">Terms of use</a> and{" "}
-                    <a href="#" className="font-semibold text-brand underline underline-offset-4">Privacy policy</a>, and confirm I am a
-                    registered medical practitioner.
-                  </span>
-                </label>
-                {errors.terms && (
-                  <p id="terms-error" className="mt-1.5 text-sm font-medium text-danger">
-                    {errors.terms}
-                  </p>
-                )}
-              </div>
-
-              {serverError && (
-                <p role="alert" className="rounded-xl border-[1.5px] border-danger bg-danger-light px-4 py-3 font-medium text-danger">
-                  {serverError}
-                </p>
-              )}
-
-              <Button type="submit" loading={loading}>
-                {loading ? "Creating account…" : "Create account"}
-              </Button>
+              <Button type="submit">{t.profile.continue}</Button>
             </form>
 
             <p className="mt-6 text-center text-muted">
@@ -285,9 +295,40 @@ export default function DoctorRegisterPage() {
                 Sign in
               </Link>
             </p>
+            </>
+            )}
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+function TermsBox({ terms, setTerms, error }: { terms: boolean; setTerms: (v: boolean) => void; error?: string }) {
+  return (
+    <div>
+      <label className="flex items-start gap-3">
+        <input
+          id="terms"
+          type="checkbox"
+          checked={terms}
+          onChange={(e) => setTerms(e.target.checked)}
+          className="mt-1 h-5 w-5 shrink-0 accent-brand"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "terms-error" : undefined}
+        />
+        <span className="text-[15px] text-ink">
+          I agree to the{" "}
+          <a href="#" className="font-semibold text-brand underline underline-offset-4">Terms of use</a> and{" "}
+          <a href="#" className="font-semibold text-brand underline underline-offset-4">Privacy policy</a>, and confirm I am a
+          registered medical practitioner.
+        </span>
+      </label>
+      {error && (
+        <p id="terms-error" className="mt-1.5 text-sm font-medium text-danger">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

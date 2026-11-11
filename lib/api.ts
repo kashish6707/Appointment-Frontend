@@ -3,12 +3,30 @@
 
 export type Doctor = { id: string; fullName: string };
 
+export type DegreeLevel = "UG" | "PG" | "SUPER_SPECIALITY" | "FELLOWSHIP" | "DIPLOMA" | "OTHER";
+export type DegreeInput = { level: DegreeLevel; name: string; institute?: string; year?: number };
+
+/** The doctor's professional profile. `photo` is a data URL; leave it out when editing to keep the current one. */
+export type ProfileInput = {
+  specialisation?: string;
+  experienceYears: number;
+  degrees: DegreeInput[];
+  fee: number;
+  registrationNo: string;
+  medicalCouncil?: string;
+  photo?: string;
+  about?: string;
+  achievements?: string[];
+  expertise?: string[];
+};
+
 export type RegisterDoctorInput = {
   fullName: string;
   method: "phone" | "email";
   phone?: string; // 10 digits, without +91
   email?: string;
   password: string;
+  profile: ProfileInput;
 };
 
 export type LoginDoctorInput = {
@@ -19,14 +37,22 @@ export type LoginDoctorInput = {
 };
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  /** `code` and `data` come from errors the UI can act on, e.g. LIMIT_REACHED or HAS_BOOKINGS. */
+  constructor(public status: number, message: string, public code?: string, public data: Record<string, unknown> = {}) {
     super(message);
   }
 }
 
 const OFFLINE = "Can’t reach the server. Check your internet connection and try again.";
+const GENERIC = "Something went wrong. Please try again.";
 
-async function request<T>(path: string, init: RequestInit, fallbacks: Record<number, string>, defaultMessage: string): Promise<T> {
+/** fetch() for /api/* with JSON in and out. Throws ApiError with a message that can be shown as is. */
+export async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  fallbacks: Record<number, string> = {},
+  defaultMessage: string = GENERIC,
+): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -40,7 +66,7 @@ async function request<T>(path: string, init: RequestInit, fallbacks: Record<num
   const body = res.status === 204 ? {} : await res.json().catch(() => ({}));
   if (!res.ok) {
     const message = typeof body.message === "string" ? body.message : fallbacks[res.status] ?? defaultMessage;
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, message, typeof body.code === "string" ? body.code : undefined, body);
   }
   return body as T;
 }
@@ -55,10 +81,10 @@ export function registerDoctor(input: RegisterDoctorInput) {
   );
 }
 
-/** POST /api/auth/doctor/login — the backend sets the session cookie. */
-export function loginDoctor(input: LoginDoctorInput) {
-  return request<{ doctor: Doctor }>(
-    "/api/auth/doctor/login",
+/** POST /api/auth/login: signs in a doctor or a staff member; the backend sets the session cookie. */
+export function signIn(input: LoginDoctorInput) {
+  return request<{ doctor?: Doctor; staff?: { id: string; fullName: string } }>(
+    "/api/auth/login",
     { method: "POST", body: JSON.stringify(input) },
     {
       401: "That mobile number, email or password is wrong. Check and try again.",
