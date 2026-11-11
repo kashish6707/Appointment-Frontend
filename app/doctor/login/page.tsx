@@ -1,16 +1,27 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import Logo from "@/components/Logo";
+import { getCurrentDoctor } from "@/lib/session";
+import LoginForm from "./LoginForm";
 
-// Placeholder until the sign-in screen is built.
-export default function DoctorLogin() {
+/** Only same-site paths, so ?next= can't send people to another website. */
+function safeNext(next: string | string[] | undefined) {
+  return typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "/doctor/dashboard";
+}
+
+export default async function DoctorLoginPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const next = safeNext((await searchParams).next);
+  // Already signed in with a valid session: skip the form. If the backend is down, just show the form.
+  const doctor = await getCurrentDoctor().catch(() => null);
+  if (doctor) redirect(next);
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-5 py-10">
-      <Logo />
-      <h1 className="text-2xl font-bold">Doctor sign in</h1>
-      <p className="text-muted">Sign in will be added in the next step.</p>
-      <Link href="/doctor/register" className="font-semibold text-brand underline underline-offset-4">
-        Create a doctor account
-      </Link>
+    <main className="mx-auto w-full max-w-lg px-5 py-8 sm:py-12">
+      <div className="mb-8">
+        <Logo />
+      </div>
+      <h1 className="text-[28px] font-bold leading-tight tracking-tight">Sign in to your doctor account</h1>
+      <p className="mt-2 text-muted">Use the mobile number or email you registered with.</p>
+      <LoginForm next={next} />
     </main>
   );
 }
