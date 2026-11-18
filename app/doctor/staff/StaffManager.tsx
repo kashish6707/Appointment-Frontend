@@ -3,8 +3,8 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import useSWR, { SWRConfig } from "swr";
-import Logo from "@/components/Logo";
-import TextField from "@/components/TextField";
+import Logo from "@/components/ui/Logo";
+import TextField from "@/components/ui/TextField";
 import { ApiError } from "@/lib/api";
 import {
   addStaff,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Dashboard, SessionAction } from "@/lib/doctorApi";
 import { t } from "@/lib/strings";
 import { clockTime, hhmm } from "@/lib/time";
@@ -23,15 +23,33 @@ type Props = {
   canCall: boolean;
   busy: SessionAction | null;
   onAction: (action: SessionAction) => Promise<boolean>;
+  /** Take a break of a set length, or add time to the current one. */
+  onBreak: (minutes: number) => Promise<boolean>;
+  onExtend: (minutes: number) => Promise<boolean>;
 };
 
-export default function AvailabilityCard({ day, isToday, canReopen, canManage, canCall, busy, onAction }: Props) {
+const BREAK_CHOICES = [10, 15, 20, 30, 45, 60];
+
+/** Minutes until `iso` (negative once it has passed), refreshed every 20 seconds. */
+function useMinutesUntil(iso: string | null) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!iso) return;
+    const id = setInterval(() => setNow(Date.now()), 20_000);
+    return () => clearInterval(id);
+  }, [iso]);
+  return iso ? Math.round((new Date(iso).getTime() - now) / 60_000) : null;
+}
+
+export default function AvailabilityCard({ day, isToday, canReopen, canManage, canCall, busy, onAction, onBreak, onExtend }: Props) {
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [askBreak, setAskBreak] = useState(false);
   const session = day.session;
   const status = session?.status;
   const canRun = isToday && !!session && status !== "CLOSED";
   const queueEmpty = day.stats.waiting === 0 && day.stats.withDoctor === 0;
   const plan = day.plan;
+  const breakLeft = useMinutesUntil(status === "ON_BREAK" ? session?.breakUntil ?? null : null);
 
   let nextHint = "";
   if (!canRun) nextHint = "";
@@ -49,6 +67,13 @@ export default function AvailabilityCard({ day, isToday, canReopen, canManage, c
                 <span aria-hidden="true" className={`h-3 w-3 rounded-full ${DOT[status]} ${status === "IN_OPD" ? "ring-4 ring-brand-light" : ""}`} />
                 {t.availability.status[status]}
               </p>
+              {status === "ON_BREAK" && session.breakUntil && breakLeft !== null && (
+                <p className={`mt-1 font-semibold ${breakLeft < 0 ? "text-danger" : "text-[#6B4E00]"}`} aria-live="polite">
+                  {breakLeft < 0
+                    ? t.availability.overrun(-breakLeft)
+                    : `${t.availability.backAt(clockTime(session.breakUntil))} · ${t.availability.minutesLeft(breakLeft)}`}
+                </p>
+              )}
               <p className="mt-1 text-muted">
                 {status === "CLOSED" && session.closedAt
                   ? t.availability.endedAt(clockTime(session.closedAt))
@@ -96,10 +121,13 @@ export default function AvailabilityCard({ day, isToday, canReopen, canManage, c
                 <button type="button" className={pill.primary} disabled={!!busy} onClick={() => onAction("start")}>{t.availability.start}</button>
               )}
               {status === "IN_OPD" && (
-                <button type="button" className={pill.outline} disabled={!!busy} onClick={() => onAction("pause")}>{t.availability.pause}</button>
+                <button type="button" className={pill.outline} disabled={!!busy} onClick={() => setAskBreak(true)}>{t.availability.pause}</button>
               )}
               {status === "ON_BREAK" && (
-                <button type="button" className={pill.primary} disabled={!!busy} onClick={() => onAction("resume")}>{t.availability.resume}</button>
+                <>
+                  <button type="button" className={pill.primary} disabled={!!busy} onClick={() => onAction("resume")}>{t.availability.resume}</button>
+                  <button type="button" className={pill.outline} disabled={!!busy} onClick={() => onExtend(10)}>{t.availability.addTime(10)}</button>
+                </>
               )}
               {(status === "IN_OPD" || status === "ON_BREAK") && (
                 <button type="button" className={pill.danger} disabled={!!busy} onClick={() => setConfirmEnd(true)}>{t.availability.end}</button>
@@ -132,6 +160,14 @@ export default function AvailabilityCard({ day, isToday, canReopen, canManage, c
         </div>
       </div>
 
+      <BreakDialog
+        open={askBreak}
+        busy={busy === "pause"}
+        onCancel={() => setAskBreak(false)}
+        onConfirm={async (minutes) => {
+          if (await onBreak(minutes)) setAskBreak(false);
+        }}
+      />
       <ConfirmDialog
         open={confirmEnd}
         title={t.availability.endConfirmTitle}
@@ -176,5 +212,82 @@ export function StatTiles({ day }: { day: Dashboard }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Choose how long the break is. Uses <dialog> so focus and Escape work. */
+function BreakDialog({ open, busy, onCancel, onConfirm }: { open: boolean; busy: boolean; onCancel: () => void; onConfirm: (minutes: number) => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [choice, setChoice] = useState<number | "other">(15);
+  const [custom, setCustom] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (open && !d.open) {
+      setError("");
+      d.showModal();
+    }
+    if (!open && d.open) d.close();
+  }, [open]);
+
+  function submit(ev: FormEvent) {
+    ev.preventDefault();
+    const minutes = choice === "other" ? Number(custom) : choice;
+    if (!Number.isInteger(minutes) || minutes < 5 || minutes > 180) {
+      setError(t.availability.breakCustomError);
+      document.getElementById("break-custom")?.focus();
+      return;
+    }
+    onConfirm(minutes);
+  }
+
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby="break-title"
+      onCancel={(e) => { e.preventDefault(); onCancel(); }}
+      className="w-[calc(100%-32px)] max-w-md rounded-[20px] border border-line p-6 text-ink shadow-soft backdrop:bg-ink/40"
+    >
+      <form onSubmit={submit} noValidate>
+        <h2 id="break-title" className="text-xl font-bold">{t.availability.breakTitle}</h2>
+        <p className="mt-2 text-muted">{t.availability.breakText}</p>
+        <div role="radiogroup" aria-labelledby="break-title" className="mt-5 grid grid-cols-3 gap-2">
+          {BREAK_CHOICES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={choice === m}
+              onClick={() => { setChoice(m); setError(""); }}
+              className={`rounded-full border-[1.5px] py-2.5 font-semibold transition-colors ${choice === m ? "border-brand bg-brand text-white" : "border-line hover:border-brand"}`}
+            >
+              {t.availability.breakMinutes(m)}
+            </button>
+          ))}
+        </div>
+        <div className="mt-4">
+          <label htmlFor="break-custom" className="mb-1.5 block font-semibold">{t.availability.breakCustom}</label>
+          <input
+            id="break-custom"
+            inputMode="numeric"
+            maxLength={3}
+            placeholder="25"
+            value={custom}
+            onFocus={() => setChoice("other")}
+            onChange={(e) => { setCustom(e.target.value.replace(/\D/g, "")); setChoice("other"); setError(""); }}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "break-custom-error" : undefined}
+            className={`w-32 rounded-xl border-[1.5px] px-3.5 py-2.5 text-base focus:border-brand focus:outline-none ${choice === "other" ? "border-brand" : "border-line"}`}
+          />
+          {error && <p id="break-custom-error" className="mt-1.5 text-sm font-medium text-danger">{error}</p>}
+        </div>
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button type="button" onClick={onCancel} className={pill.outline}>{t.common.cancel}</button>
+          <button type="submit" disabled={busy} className={pill.primary}>{t.availability.breakStart}</button>
+        </div>
+      </form>
+    </dialog>
   );
 }

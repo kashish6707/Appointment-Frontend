@@ -2,9 +2,9 @@
 
 import { use, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Button from "@/components/Button";
-import Logo from "@/components/Logo";
-import TextField from "@/components/TextField";
+import Button from "@/components/ui/Button";
+import Logo from "@/components/ui/Logo";
+import TextField from "@/components/ui/TextField";
 import { ApiError } from "@/lib/api";
 import { acceptInvite, getInvite, type InviteDetails } from "@/lib/doctorApi";
 import { t } from "@/lib/strings";

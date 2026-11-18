@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getMe } from "@/lib/session";
 import StaffManager from "./StaffManager";
 
-export const metadata: Metadata = { title: "Staff & access · Clinically" };
+export const metadata: Metadata = { title: "Staff & access" };
 
 export default async function StaffPage() {
   const me = await getMe();

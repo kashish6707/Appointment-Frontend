@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Logo from "@/components/Logo";
+import Logo from "@/components/ui/Logo";
 import { ApiError } from "@/lib/api";
 import { chooseWorkplace, type Me } from "@/lib/doctorApi";
 import { t } from "@/lib/strings";

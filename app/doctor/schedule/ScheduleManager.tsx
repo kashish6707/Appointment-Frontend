@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import useSWR, { SWRConfig } from "swr";
-import Logo from "@/components/Logo";
+import Logo from "@/components/ui/Logo";
 import { ApiError } from "@/lib/api";
 import {
   addException,

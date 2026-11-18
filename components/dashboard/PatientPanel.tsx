@@ -17,7 +17,7 @@ import {
   type Permission,
 } from "@/lib/doctorApi";
 import { t } from "@/lib/strings";
-import { clockTime, longDate, shortDate, todayIST } from "@/lib/time";
+import { clockTime, hhmm, longDate, shortDate, todayIST } from "@/lib/time";
 import { TokenBadge } from "./Bookings";
 import { ErrorBox, pill, Skeleton, StatusChip } from "./ui";
 
@@ -133,6 +133,7 @@ function Details({ data, can, busy, onEdit, onTestToggle }: {
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusChip status={booking.status} />
             {data.queuePosition && <span className="text-sm font-semibold text-brand-dark">{t.panel.position(data.queuePosition)}</span>}
+            {data.expectedAt && <span className="text-sm text-muted">· {t.panel.expectedAround(hhmm(data.expectedAt))}</span>}
           </div>
         </div>
       </div>

@@ -75,3 +75,10 @@ export function weekOf(date: string): string[] {
   const monday = addDays(date, -weekdayIndex(date));
   return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 }
+
+/** "17:00" as "5 pm", "17:30" as "5:30 pm" (for patients). */
+export function shortTime(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const hour = ((h + 11) % 12) + 1;
+  return `${hour}${m ? `:${String(m).padStart(2, "0")}` : ""} ${h < 12 ? "am" : "pm"}`;
+}

@@ -7,3 +7,9 @@
   body { @apply bg-white text-ink antialiased; line-height: 1.5; }
   :focus-visible { outline: 3px solid #E8A317; outline-offset: 2px; }
 }
+
+@layer utilities {
+  /* Swipeable rows (carousels, department strip): scroll without a visible scrollbar. */
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+}

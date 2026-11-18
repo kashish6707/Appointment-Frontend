@@ -2,9 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import Logo from "@/components/Logo";
-import Button from "@/components/Button";
-import TextField from "@/components/TextField";
+import Logo from "@/components/ui/Logo";
+import Button from "@/components/ui/Button";
+import TextField from "@/components/ui/TextField";
 import { isEmail, isIndianMobile, isStrongPassword, passwordRules } from "@/lib/validation";
 import { ApiError, registerDoctor } from "@/lib/api";
 import ProfileFields, { emptyDraft, toInput, validateDraft, type ProfileDraft, type ProfileErrors } from "@/components/ProfileFields";
@@ -135,8 +135,8 @@ export default function DoctorRegisterPage() {
             </span>
             <h1 className="mt-5 text-2xl font-bold">Account created</h1>
             <p className="mt-2 text-muted">
-              Welcome, {fullName.trim()}. Next, sign in to add your clinic and OPD timings. We’ll check your registration
-              details before your profile is shown to patients.
+              Welcome, {fullName.trim()}. Your 3-month free trial has started. Next, sign in and add your clinic and OPD
+              timings, and patients can start booking tokens.
             </p>
             <Link
               href="/doctor/login"

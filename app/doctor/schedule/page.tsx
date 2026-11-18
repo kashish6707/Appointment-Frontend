@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getMe } from "@/lib/session";
 import ScheduleManager from "./ScheduleManager";
 
-export const metadata: Metadata = { title: "OPD timings · Clinically" };
+export const metadata: Metadata = { title: "OPD timings" };
 
 export default async function SchedulePage() {
   const me = await getMe();

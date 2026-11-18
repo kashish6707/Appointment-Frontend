@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import Logo from "@/components/Logo";
+import Logo from "@/components/ui/Logo";
 import { keys, type DoctorProfile, type Me, type SearchResult } from "@/lib/doctorApi";
 import { t } from "@/lib/strings";
 import { shortDate } from "@/lib/time";

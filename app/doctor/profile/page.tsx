@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getMe } from "@/lib/session";
 import ProfileEditor from "./ProfileEditor";
 
-export const metadata: Metadata = { title: "Your profile · Clinically" };
+export const metadata: Metadata = { title: "Your profile" };
 
 export default async function ProfilePage() {
   const me = await getMe();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { io } from "socket.io-client";
+import { dashboardSocket } from "./socket";
 import type { Booking, OpdSession } from "./doctorApi";
 
 export type LiveEvent =
@@ -9,8 +9,8 @@ export type LiveEvent =
   | { type: "session.updated"; session: OpdSession };
 
 /**
- * Connects to the backend's Socket.IO server through this site's /api proxy, so the session
- * cookie is sent. Calls onEvent for every dashboard event, and onReconnect after a dropped
+ * Connects to the backend's Socket.IO server (lib/socket.ts: through this site's /api proxy with
+ * the session cookie, or straight to the backend with a ticket). Calls onEvent for every dashboard event, and onReconnect after a dropped
  * connection comes back (events may have been missed, so data should be refetched).
  */
 export function useLiveUpdates(onEvent: (e: LiveEvent) => void, onReconnect: () => void) {
@@ -19,12 +19,7 @@ export function useLiveUpdates(onEvent: (e: LiveEvent) => void, onReconnect: () 
   const [connected, setConnected] = useState(true);
 
   useEffect(() => {
-    const socket = io({
-      path: "/api/socket.io",
-      // Next.js redirects /api/socket.io/ to drop the slash, which would break the handshake.
-      addTrailingSlash: false,
-      withCredentials: true,
-    });
+    const socket = dashboardSocket();
     let dropped = false;
     socket.on("connect", () => {
       setConnected(true);

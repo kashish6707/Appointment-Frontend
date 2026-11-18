@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type KeyboardEvent } from "react";
-import TextField from "@/components/TextField";
+import TextField from "@/components/ui/TextField";
 import type { DegreeLevel, ProfileInput } from "@/lib/api";
 import type { OwnProfile } from "@/lib/doctorApi";
 import { PhotoError, squarePhoto } from "@/lib/photo";

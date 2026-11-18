@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Booking, BookingStatus } from "@/lib/doctorApi";
 import { t } from "@/lib/strings";
-import { clockTime } from "@/lib/time";
+import { clockTime, hhmm } from "@/lib/time";
 import { Card, StatusChip } from "./ui";
 
 type Filter = "all" | "WAITING" | "DONE" | "SENT_FOR_TESTS";
@@ -14,9 +14,13 @@ type Props = {
   bookings: Booking[];
   highlighted: Set<string>;
   onOpen: (bookingId: string) => void;
+  /** Roughly when each waiting patient's turn comes ("HH:MM"), moving with breaks. */
+  expected: Record<string, string>;
 };
 
-export default function Bookings({ title, bookings, highlighted, onOpen }: Props) {
+export default function Bookings({ title, bookings, highlighted, onOpen, expected }: Props) {
+  // Only waiting patients have a turn still to come.
+  const expectedFor = (b: Booking) => (b.status === "WAITING" ? expected[b.id] : undefined);
   const [filter, setFilter] = useState<Filter>("all");
   const count = (f: Filter) => (f === "all" ? bookings.length : bookings.filter((b) => b.status === f).length);
   const shown = filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
@@ -62,6 +66,7 @@ export default function Bookings({ title, bookings, highlighted, onOpen }: Props
                       {t.ageGender(b.patient.age, b.patient.gender)} · {t.visitType[b.visitType]}
                     </span>
                     <span className="block text-sm text-muted">{t.source[b.source]} · {clockTime(b.bookedAt)}</span>
+                    {expectedFor(b) && <span className="block text-sm font-semibold text-brand-dark">{t.bookings.expectedAt(hhmm(expectedFor(b)!))}</span>}
                   </span>
                   <StatusChip status={b.status} />
                 </button>
@@ -71,7 +76,7 @@ export default function Bookings({ title, bookings, highlighted, onOpen }: Props
 
           {/* Tablets and up: a table that scrolls sideways if it has to */}
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[640px] border-separate border-spacing-0 text-left">
+            <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left">
               <thead>
                 <tr className="text-sm text-muted">
                   {Object.values(t.bookings.columns).map((c) => (
@@ -99,6 +104,9 @@ export default function Bookings({ title, bookings, highlighted, onOpen }: Props
                     <td className="border-b border-line px-3 py-3">
                       <span className="block text-ink">{t.source[b.source]}</span>
                       <span className="block text-sm text-muted">{clockTime(b.bookedAt)}</span>
+                    </td>
+                    <td className="border-b border-line px-3 py-3 tabular-nums">
+                      {expectedFor(b) ? <span className="font-semibold text-brand-dark">{hhmm(expectedFor(b)!)}</span> : <span className="text-muted">—</span>}
                     </td>
                     <td className="border-b border-line px-3 py-3"><StatusChip status={b.status} /></td>
                   </tr>

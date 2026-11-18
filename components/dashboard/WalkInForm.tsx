@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import TextField from "@/components/TextField";
+import TextField from "@/components/ui/TextField";
 import { ApiError } from "@/lib/api";
 import { addWalkIn, type Booking, type Gender } from "@/lib/doctorApi";
 import { t } from "@/lib/strings";
 import { isIndianMobile } from "@/lib/validation";
+import TrackingShare from "./TrackingShare";
 import { Card, ConfirmDialog, pill } from "./ui";
 
 type Errors = Partial<Record<"name" | "age" | "gender" | "phone", string>>;
 
-export default function WalkInForm({ sessionId, onAdded }: { sessionId: string | null; onAdded: (b: Booking) => void }) {
+type Added = { booking: Booking; code: string; phone?: string };
+
+export default function WalkInForm({ sessionId, doctorName, onAdded }: { sessionId: string | null; doctorName: string; onAdded: (b: Booking) => void }) {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
@@ -20,15 +23,18 @@ export default function WalkInForm({ sessionId, onAdded }: { sessionId: string |
   const [busy, setBusy] = useState(false);
   // Set when the day's limit is reached: the desk can still add this walk-in after confirming.
   const [overLimit, setOverLimit] = useState<{ limit: number; booked: number } | null>(null);
+  // The last walk-in added: show its QR code and WhatsApp link until the desk is done.
+  const [added, setAdded] = useState<Added | null>(null);
 
   async function save(force: boolean) {
     if (!sessionId) return;
     setBusy(true);
     try {
-      const { booking } = await addWalkIn(sessionId, {
+      const { booking, trackingCode } = await addWalkIn(sessionId, {
         name: name.trim(), age: Number(age), gender: gender as Gender, ...(phone ? { phone } : {}), ...(force ? { overLimit: true } : {}),
       });
       onAdded(booking);
+      setAdded({ booking, code: trackingCode, phone: phone || undefined });
       setName(""); setAge(""); setGender(""); setPhone("");
       setOverLimit(null);
     } catch (err) {
@@ -65,6 +71,9 @@ export default function WalkInForm({ sessionId, onAdded }: { sessionId: string |
     <Card title={t.walkIn.title}>
       {!sessionId ? (
         <p className="text-muted">{t.walkIn.unavailable}</p>
+      ) : added ? (
+        <TrackingShare token={added.booking.token} name={added.booking.patient.name} phone={added.phone} bookingId={added.booking.id}
+          code={added.code} doctorName={doctorName} onDone={() => { setAdded(null); setTimeout(() => document.getElementById("walkin-name")?.focus(), 0); }} />
       ) : (
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
           <TextField id="walkin-name" label={t.walkIn.name} value={name} onChange={(e) => setName(e.target.value)} error={errors.name} autoComplete="off" />

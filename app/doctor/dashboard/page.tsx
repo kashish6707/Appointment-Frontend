@@ -4,7 +4,7 @@ import { getMe } from "@/lib/session";
 import DashboardApp from "./DashboardApp";
 import WorkplacePicker from "./WorkplacePicker";
 
-export const metadata: Metadata = { title: "Dashboard · Clinically" };
+export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DoctorDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   // middleware.ts already sent visitors without a cookie to sign in; this catches expired sessions.

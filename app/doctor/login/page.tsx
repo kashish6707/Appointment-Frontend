@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Logo from "@/components/Logo";
+import Logo from "@/components/ui/Logo";
 import { getMe } from "@/lib/session";
 import LoginForm from "./LoginForm";
 

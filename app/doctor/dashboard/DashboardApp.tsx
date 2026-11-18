@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import useSWR, { SWRConfig, useSWRConfig } from "swr";
 import { ApiError } from "@/lib/api";
 import {
+  extendBreak,
   fetcher,
   keys,
   sessionAction,
+  startBreak,
   withBooking,
   withSession,
   type Booking,
@@ -19,13 +21,15 @@ import {
   type SessionAction,
 } from "@/lib/doctorApi";
 import { t } from "@/lib/strings";
-import { longDate, partOfDay, todayIST } from "@/lib/time";
+import { clockTime, longDate, partOfDay, todayIST } from "@/lib/time";
 import { useLiveUpdates, type LiveEvent } from "@/lib/useLiveUpdates";
 import AvailabilityCard, { StatTiles } from "@/components/dashboard/AvailabilityCard";
 import Bookings, { CancelledCard } from "@/components/dashboard/Bookings";
 import { MonthCalendar, WeekStrip } from "@/components/dashboard/Calendar";
 import PatientPanel from "@/components/dashboard/PatientPanel";
 import TopBar from "@/components/dashboard/TopBar";
+import AddClinicForm from "@/components/dashboard/AddClinicForm";
+import TrialBanner from "@/components/dashboard/TrialBanner";
 import WalkInForm from "@/components/dashboard/WalkInForm";
 import { ErrorBox, Skeleton, Toasts, type Toast } from "@/components/dashboard/ui";
 
@@ -75,7 +79,8 @@ function DashboardInner({ me, doctor }: { me: Me; doctor: DoctorProfile }) {
   }, []);
 
   const dayKey = keys.dashboard(date, clinicId);
-  const { data: day, error, mutate } = useSWR<Dashboard>(clinicId ? dayKey : null, { keepPreviousData: true });
+  // Refreshed every minute too: expected times move as time passes and breaks run.
+  const { data: day, error, mutate } = useSWR<Dashboard>(clinicId ? dayKey : null, { keepPreviousData: true, refreshInterval: 60_000 });
   const isToday = date === today;
 
   const toast = useCallback((text: string, tone: Toast["tone"] = "info", action?: Toast["action"]) => {
@@ -136,6 +141,7 @@ function DashboardInner({ me, doctor }: { me: Me; doctor: DoctorProfile }) {
       }
       if (action === "end") toast(t.availability.ended, "info", { label: t.availability.undo, onClick: () => runAction("reopen") });
       if (action === "reopen") toast(t.availability.reopened);
+      if (action === "resume" || action === "next") mutate(); // expected times move
       if (r.current) {
         applyBooking(r.current);
         toast(t.availability.called(r.current.token, r.current.patient.name));
@@ -146,6 +152,25 @@ function DashboardInner({ me, doctor }: { me: Me; doctor: DoctorProfile }) {
     } catch (err) {
       toast(err instanceof ApiError ? err.message : t.common.loadError, "error");
       mutate();
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** Start or extend a break; the dashboard refetches so expected times move at once. */
+  async function runBreak(kind: "start" | "extend", minutes: number) {
+    if (!day?.session) return false;
+    setBusy("pause");
+    try {
+      const r = kind === "start" ? await startBreak(day.session.id, minutes) : await extendBreak(day.session.id, minutes);
+      applySession(r.session);
+      const until = r.session.breakUntil ? clockTime(r.session.breakUntil) : "";
+      toast(kind === "start" ? t.availability.breakStarted(until) : t.availability.breakExtended(until));
+      mutate();
+      return true;
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : t.common.loadError, "error");
       return false;
     } finally {
       setBusy(null);
@@ -168,8 +193,14 @@ function DashboardInner({ me, doctor }: { me: Me; doctor: DoctorProfile }) {
     return (
       <>
         <TopBar me={me} doctor={doctor} clinicId={undefined} onClinicChange={setClinicId} date={date} onOpenBooking={setOpenBooking} />
-        <main className="mx-auto max-w-[1320px] px-4 py-10 sm:px-6">
-          <ErrorBox message="Add a clinic and OPD timings to your profile to start taking bookings." />
+        <TrialBanner endsAt={doctor.trialEndsAt} />
+        <main className="mx-auto max-w-[720px] px-4 py-8 sm:px-6">
+          {me.viewer.type === "STAFF" ? (
+            <ErrorBox message="This doctor hasn’t added a clinic yet." />
+          ) : (
+            // The server page reads the doctor's clinics: reload so the whole dashboard starts with the new one.
+            <AddClinicForm onAdded={() => window.location.reload()} />
+          )}
         </main>
       </>
     );
@@ -178,6 +209,7 @@ function DashboardInner({ me, doctor }: { me: Me; doctor: DoctorProfile }) {
   return (
     <div className="min-h-screen bg-white">
       <TopBar me={me} doctor={doctor} clinicId={clinicId} onClinicChange={(id) => { setClinicId(id); setOpenBooking(null); }} date={date} onOpenBooking={setOpenBooking} />
+      <TrialBanner endsAt={doctor.trialEndsAt} />
 
       <main className="mx-auto max-w-[1320px] px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
         {/* Welcome row */}
@@ -233,7 +265,8 @@ function DashboardInner({ me, doctor }: { me: Me; doctor: DoctorProfile }) {
               </>
             ) : (
               <>
-                <AvailabilityCard day={day} isToday={isToday} canReopen={date >= today} canManage={can("opd.manage")} canCall={can("queue.call")} busy={busy} onAction={runAction} />
+                <AvailabilityCard day={day} isToday={isToday} canReopen={date >= today} canManage={can("opd.manage")} canCall={can("queue.call")} busy={busy} onAction={runAction}
+                  onBreak={(m) => runBreak("start", m)} onExtend={(m) => runBreak("extend", m)} />
                 <StatTiles day={day} />
 
                 {/* Phones: Bookings / Cancelled tabs */}
@@ -253,13 +286,13 @@ function DashboardInner({ me, doctor }: { me: Me; doctor: DoctorProfile }) {
                 </div>
 
                 <div className={mobileTab === "today" ? "" : "hidden md:block"}>
-                  <Bookings title={isToday ? t.bookings.titleToday : `${t.bookings.title}, ${longDate(date)}`} bookings={day.bookings} highlighted={highlighted} onOpen={setOpenBooking} />
+                  <Bookings title={isToday ? t.bookings.titleToday : `${t.bookings.title}, ${longDate(date)}`} bookings={day.bookings} highlighted={highlighted} onOpen={setOpenBooking} expected={day.expected ?? {}} />
                 </div>
                 <div className={`md:hidden ${mobileTab === "cancelled" ? "" : "hidden"}`}>
                   <CancelledCard title={isToday ? t.cancelled.titleToday : t.cancelled.title} cancelled={day.cancelled} onOpen={setOpenBooking} />
                 </div>
                 <div className={can("walkins.add") ? "md:hidden" : "hidden"}>
-                  <WalkInForm sessionId={isToday && day.session && day.session.status !== "CLOSED" ? day.session.id : null} onAdded={(b) => { applyBooking(b); highlight(b.id); toast(t.walkIn.added(b.token, b.patient.name)); }} />
+                  <WalkInForm doctorName={doctor.fullName} sessionId={isToday && day.session && day.session.status !== "CLOSED" ? day.session.id : null} onAdded={(b) => { applyBooking(b); highlight(b.id); toast(t.walkIn.added(b.token, b.patient.name)); }} />
                 </div>
               </>
             )}
@@ -271,7 +304,7 @@ function DashboardInner({ me, doctor }: { me: Me; doctor: DoctorProfile }) {
             {day && (
               <>
                 <CancelledCard title={isToday ? t.cancelled.titleToday : t.cancelled.title} cancelled={day.cancelled} onOpen={setOpenBooking} />
-                {can("walkins.add") && <WalkInForm sessionId={isToday && day.session && day.session.status !== "CLOSED" ? day.session.id : null} onAdded={(b) => { applyBooking(b); highlight(b.id); toast(t.walkIn.added(b.token, b.patient.name)); }} />}
+                {can("walkins.add") && <WalkInForm doctorName={doctor.fullName} sessionId={isToday && day.session && day.session.status !== "CLOSED" ? day.session.id : null} onAdded={(b) => { applyBooking(b); highlight(b.id); toast(t.walkIn.added(b.token, b.patient.name)); }} />}
               </>
             )}
           </aside>

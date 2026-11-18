@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { APP_NAME } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Clinically",
+  title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   description: "Find the right doctor in Patna and book your token from home.",
 };
 

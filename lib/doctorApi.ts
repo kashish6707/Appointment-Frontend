@@ -38,6 +38,8 @@ export type DoctorProfile = {
   photoUrl: string | null;
   /** False for accounts made before the full profile was required at registration. */
   profileComplete: boolean;
+  /** End of the free trial (ISO). Only sent to the doctor, not staff. */
+  trialEndsAt?: string | null;
   clinics: ClinicSlot[];
 };
 
@@ -48,6 +50,8 @@ export type OpdSession = {
   status: SessionStatus;
   startedAt: string | null;
   closedAt: string | null; // when End OPD was pressed; null while open
+  breakStartedAt: string | null;
+  breakUntil: string | null; // while ON_BREAK: when the doctor said they'd be back
   currentToken: number | null;
 };
 
@@ -100,6 +104,8 @@ export type Dashboard = {
   isOpdDay: boolean;
   plan: DayPlan;
   session: OpdSession | null;
+  /** Roughly when each waiting patient's turn comes, moving with breaks: { bookingId: "HH:MM" }. */
+  expected: Record<string, string>;
   /** How the "OPD has started" messages to patients went. */
   notifications: NotificationSummary | null;
   stats: DayStats;
@@ -144,6 +150,7 @@ export type BookingDetail = {
   booking: SearchResult;
   session: OpdSession;
   queuePosition: number | null;
+  expectedAt: string | null; // "HH:MM", for a waiting patient
   patient: PatientBasic & { heightCm: number | null; weightKg: number | null };
   correction: { updatedBy: string; updatedAt: string; original: { name: string; age: number; gender: Gender } } | null;
   recordsConsent: boolean;
@@ -251,8 +258,14 @@ const post = <T,>(path: string, body?: unknown) =>
 
 export type SessionAction = "start" | "pause" | "resume" | "end" | "reopen" | "next";
 
-export const sessionAction = (sessionId: string, action: SessionAction) =>
-  post<QueueResult>(`/api/doctor/sessions/${sessionId}/${action}`);
+export const sessionAction = (sessionId: string, action: SessionAction, body?: { minutes: number }) =>
+  post<QueueResult>(`/api/doctor/sessions/${sessionId}/${action}`, body);
+
+/** Take a break of `minutes`; waiting patients' expected times move by it. */
+export const startBreak = (sessionId: string, minutes: number) => sessionAction(sessionId, "pause", { minutes });
+
+export const extendBreak = (sessionId: string, minutes: number) =>
+  post<QueueResult>(`/api/doctor/sessions/${sessionId}/break/extend`, { minutes });
 
 export const callPatient = (bookingId: string) => post<QueueResult>(`/api/doctor/bookings/${bookingId}/call`);
 
@@ -389,3 +402,22 @@ export type OwnProfile = {
 
 export const updateProfile = (input: ProfileInput & { fullName?: string }) =>
   request<OwnProfile>("/api/doctor/profile", { method: "PUT", body: JSON.stringify(input) });
+
+// --- adding a clinic ---------------------------------------------------------------------
+
+export type NewClinic = {
+  type: "CLINIC" | "HOSPITAL";
+  name: string;
+  address: string;
+  areaKey: string;
+  phone?: string;
+  fee: number;
+  days: string[]; // MON..SUN
+  start: string; // HH:MM
+  end: string;
+  limit?: number | null;
+};
+
+export const addClinic = (input: NewClinic) => post<ClinicSlot>("/api/doctor/clinic-details", input);
+
+export const getAreas = () => request<{ areas: { id: string; key: string; name: string; nameHi: string }[] }>("/api/public/areas");

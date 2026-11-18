@@ -1,6 +1,8 @@
+import { APP_NAME } from "@/lib/brand";
+
 type Props = { size?: number; showText?: boolean };
 
-/** Clinically logo: a clinic whose roof is a stethoscope. */
+/** The app logo: a clinic whose roof is a stethoscope. */
 export default function Logo({ size = 40, showText = true }: Props) {
   return (
     <span className="inline-flex items-center gap-2.5">
@@ -17,7 +19,7 @@ export default function Logo({ size = 40, showText = true }: Props) {
       </svg>
       {showText && (
         <span className="leading-tight">
-          <span className="block text-xl font-bold tracking-tight text-ink">Clinically</span>
+          <span className="block text-xl font-bold tracking-tight text-ink">{APP_NAME}</span>
         </span>
       )}
     </span>
