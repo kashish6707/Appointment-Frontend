@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n/LanguageProvider";
 import { loadTokens, saveToken } from "@/lib/myTokens";
 import { cancelBooking, getTracking, type Tracking } from "@/lib/patientApi";
 import { clockTime, longDate, shortTime, todayIST } from "@/lib/time";
+import { alertPatient, askForNotifications, notificationsAllowed, notificationsSupported, unlockSound } from "@/lib/queueAlert";
 import { useTrackingLive } from "@/lib/useTrackingLive";
 import { useAccount } from "./AccountProvider";
 import { ClockIcon } from "./icons";
@@ -24,6 +25,9 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
   const [cancelling, setCancelling] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastStage = useRef<string | null>(null);
+  const tRef = useRef(t);
+  tRef.current = t;
   const { me } = useAccount();
   const signedOut = useRef(false);
   signedOut.current = me === null;
@@ -32,6 +36,13 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
     if (!code) return setError(t.track.notFound);
     try {
       const r = await getTracking(bookingId, code);
+      // Alert once when the patient becomes next, and when they're called in.
+      const stage = r.status === "WITH_DOCTOR" ? "called" : r.status === "WAITING" && r.sessionStatus === "IN_OPD" && r.patientsAhead === 0 ? "next" : "waiting";
+      if (lastStage.current && stage !== lastStage.current && stage !== "waiting") {
+        alertPatient(stage === "called" ? tRef.current.track.alertCalledTitle : tRef.current.track.alertNextTitle,
+          stage === "called" ? tRef.current.track.withDoctor : tRef.current.track.alertNextBody(r.doctorName));
+      }
+      lastStage.current = stage;
       setData(r);
       setError("");
       setUpdatedAt(new Date());
@@ -49,6 +60,12 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(load, 250);
   }, [load]);
+
+  useEffect(() => {
+    // Sound needs one tap on the page first (browser rule).
+    window.addEventListener("pointerdown", unlockSound, { once: true });
+    return () => window.removeEventListener("pointerdown", unlockSound);
+  }, []);
 
   useEffect(() => {
     load();
@@ -97,10 +114,16 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
   } else {
     const isToday = data.date === todayIST();
     const waiting = data.status === "WAITING";
-    // One line in plain words about where things stand.
+    const ahead = data.patientsAhead ?? 0;
+    const running = isToday && data.sessionStatus === "IN_OPD";
+    const breakLeft = data.breakUntil ? Math.max(1, Math.round((new Date(data.breakUntil).getTime() - Date.now()) / 60000)) : null;
+    const wait = data.estimatedMinutes != null && data.estimatedMinutes >= 5 ? data.estimatedMinutes : null;
+
+    // Where things stand, in plain words: a headline and up to two lines under it.
     let headline: string;
-    let tone: "brand" | "amber" | "muted" | "danger" = "brand";
-    if (data.status === "WITH_DOCTOR") headline = t.track.withDoctor;
+    const lines: string[] = [];
+    let tone: "brand" | "amber" | "muted" | "danger" | "next" = "brand";
+    if (data.status === "WITH_DOCTOR") (headline = t.track.withDoctor), (tone = "next");
     else if (data.status === "DONE") (headline = t.track.done), (tone = "muted");
     else if (data.status === "SENT_FOR_TESTS") (headline = t.track.sentForTests), (tone = "amber");
     else if (data.status === "NO_SHOW") (headline = t.track.noShow), (tone = "danger");
@@ -108,44 +131,59 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
     else if (data.status === "PENDING_PAYMENT" || data.status === "PAYMENT_FAILED") (headline = t.track.pending), (tone = "amber");
     else if (data.sessionStatus === "CLOSED") (headline = t.track.closed), (tone = "muted");
     else if (!isToday) (headline = t.track.future(longDate(data.date))), (tone = "muted");
-    else if (data.sessionStatus === "ON_BREAK") (headline = t.track.onBreak(data.breakUntil ? clockTime(data.breakUntil) : null)), (tone = "amber");
-    else if (data.sessionStatus === "NOT_STARTED") (headline = t.track.notStarted(shortTime(data.opdStart))), (tone = "amber");
-    else headline = t.track.ahead(data.patientsAhead ?? 0);
+    else if (data.sessionStatus === "NOT_STARTED") {
+      headline = t.track.notStarted(shortTime(data.opdStart));
+      tone = "amber";
+      lines.push(t.track.beforeYou(ahead));
+    } else if (data.sessionStatus === "ON_BREAK") {
+      headline = t.track.onBreakFor(breakLeft, data.breakUntil ? clockTime(data.breakUntil) : null);
+      tone = "amber";
+      lines.push(t.track.beforeYou(ahead));
+    } else if (ahead === 0) {
+      headline = t.track.youreNext;
+      tone = "next";
+      if (data.withDoctor != null) lines.push(t.track.doctorWith(data.withDoctor));
+    } else {
+      headline = data.withDoctor != null ? t.track.doctorWith(data.withDoctor) : t.track.opdRunning;
+      lines.push(t.track.yourTurnAfter(ahead));
+      if (wait != null && data.expectedAt) lines.push(t.track.expectedIn(shortTime(data.expectedAt), wait));
+    }
 
-    const toneClass = { brand: "bg-brand-light text-brand-dark", amber: "bg-[#FFF4DE] text-[#7A4B00]", muted: "bg-brand-tint text-muted", danger: "bg-danger-light text-danger" }[tone];
-    const showQueue = isToday && waiting && data.sessionStatus !== "CLOSED";
+    const toneClass = {
+      brand: "bg-brand-light text-brand-dark",
+      amber: "bg-[#FFF4DE] text-[#7A4B00]",
+      muted: "bg-brand-tint text-muted",
+      danger: "bg-danger-light text-danger",
+      next: "bg-brand text-white",
+    }[tone];
     const shareText = t.track.shareText(data.token ?? "–", data.doctorName, link);
 
     content = (
       <div className="flex flex-col gap-4">
         <section className="overflow-hidden rounded-[22px] border border-line bg-white shadow-soft">
-          <div className="border-b border-dashed border-line px-5 py-4">
-            <p className="text-lg font-bold text-ink">{data.doctorName}</p>
-            <p className="text-[15px] text-muted">{data.clinicName}</p>
-            <p className="mt-1 text-[15px] font-semibold text-ink">{longDate(data.date)}</p>
-          </div>
-          <div className="grid grid-cols-2 divide-x divide-dashed divide-line text-center">
-            <div className="px-3 py-5">
-              <p className="text-[15px] font-semibold text-muted">{t.track.tokenLabel}</p>
-              <p className="mt-1 text-[56px] font-extrabold leading-none text-brand-dark sm:text-[64px]">{data.token ?? "–"}</p>
+          <div className="flex items-center justify-between gap-4 border-b border-dashed border-line px-5 py-4">
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-ink">{data.doctorName}</p>
+              <p className="text-[15px] text-muted">{data.clinicName}</p>
+              <p className="mt-1 text-[15px] font-semibold text-ink">{longDate(data.date)}</p>
             </div>
-            <div className="px-3 py-5">
-              <p className="text-[15px] font-semibold text-muted">{t.track.nowServing}</p>
-              <p aria-live="polite" className="mt-1 text-[56px] font-extrabold leading-none text-ink sm:text-[64px]">
-                {isToday && data.nowServing != null ? data.nowServing : "–"}
-              </p>
+            <div className="shrink-0 text-center">
+              <p className="text-sm font-semibold text-muted">{t.track.tokenLabel}</p>
+              <p className="text-[56px] font-extrabold leading-none text-brand-dark sm:text-[64px]">{data.token ?? "–"}</p>
             </div>
           </div>
-          <div className={`px-5 py-4 ${toneClass}`} aria-live="polite">
-            <p className="text-[18px] font-bold leading-snug">{headline}</p>
-            {showQueue && data.sessionStatus !== "NOT_STARTED" && data.estimatedMinutes != null && data.estimatedMinutes >= 5 && (
-              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px] font-semibold">
-                <span className="inline-flex items-center gap-1.5"><ClockIcon size={18} /> {t.track.wait(data.estimatedMinutes)}</span>
-                {data.expectedAt && <span>{t.track.expected(shortTime(data.expectedAt))}</span>}
-              </p>
+          <div className={`px-5 py-4 ${toneClass}`} aria-live="polite" role={tone === "next" ? "alert" : undefined}>
+            <p className={`font-bold leading-snug ${tone === "next" ? "text-[22px]" : "text-[19px]"}`}>{headline}</p>
+            {lines.map((l) => <p key={l} className="mt-1 text-[16px] font-semibold opacity-90">{l}</p>)}
+            {running && waiting && ahead > 0 && wait != null && !data.expectedAt && (
+              <p className="mt-1 inline-flex items-center gap-1.5 text-[15px] font-semibold"><ClockIcon size={18} /> {t.track.wait(wait)}</p>
             )}
           </div>
         </section>
+
+        {active && waiting && isToday && (
+          <AlertButton />
+        )}
 
         {active && (
           <p className="flex items-center justify-center gap-2 text-sm text-muted">
@@ -214,5 +252,24 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
         </div>
       </dialog>
     </>
+  );
+}
+
+function AlertButton() {
+  const { t } = useLang();
+  const [state, setState] = useState<"off" | "on" | "blocked">("off");
+  useEffect(() => {
+    if (notificationsAllowed()) setState("on");
+    else if (notificationsSupported() && Notification.permission === "denied") setState("blocked");
+  }, []);
+  if (state === "on") return <p className="text-center text-[15px] font-semibold text-brand-dark">🔔 {t.track.alertsOn}</p>;
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <button type="button" onClick={async () => setState((await askForNotifications()) ? "on" : notificationsSupported() ? "blocked" : "off")}
+        className="inline-flex min-h-[48px] items-center gap-2 rounded-full border-[1.5px] border-brand bg-white px-5 font-semibold text-brand hover:bg-brand-light">
+        🔔 {t.track.alertMe}
+      </button>
+      <p className="max-w-[420px] text-center text-sm text-muted">{state === "blocked" ? t.track.alertsBlocked : t.track.alertHint}</p>
+    </div>
   );
 }

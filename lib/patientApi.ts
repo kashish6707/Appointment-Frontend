@@ -242,6 +242,8 @@ export type Tracking = {
   token: number | null;
   status: BookingStatus;
   nowServing: number | null;
+  /** The token with the doctor right now, or null between patients. */
+  withDoctor?: number | null;
   patientsAhead: number | null;
   estimatedMinutes: number | null;
   expectedAt?: string | null;
