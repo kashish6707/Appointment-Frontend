@@ -158,6 +158,18 @@ export type BookingDetail = {
   recordsConsentAt: string | null;
   tests: TestAdvice[];
   records: MedicalRecord[];
+  /** What the patient wrote in their account profile; only with their consent. */
+  health: PatientHealth | null;
+};
+
+export type PatientHealth = {
+  bloodGroup: string | null;
+  allergies: string | null;
+  conditions: string | null;
+  surgeries: string | null;
+  medicines: string | null;
+  emergencyContact: { name: string | null; relation: string | null; phone: string | null } | null;
+  updatedAt: string | null;
 };
 
 export type NotificationSummary = { pending: number; sent: number; failed: number; skipped: number };

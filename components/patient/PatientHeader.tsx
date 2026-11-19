@@ -5,6 +5,8 @@ import Link from "next/link";
 import Logo from "@/components/ui/Logo";
 import { useLang } from "@/lib/i18n/LanguageProvider";
 import { DEFAULT_LOCATION, useSavedLocation } from "@/lib/location";
+import { useRouter } from "next/navigation";
+import { useAccount } from "./AccountProvider";
 import { ChevronDown, PinIcon } from "./icons";
 
 /** Location on the left (opens /location), profile menu on the right. */
@@ -36,8 +38,16 @@ export default function PatientHeader() {
   );
 }
 
+function initialsOf(name: string) {
+  const parts = name.replace(/^(dr|mr|mrs|ms)\.?\s+/i, "").split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
+}
+
 function ProfileMenu() {
   const { t, lang, setLang } = useLang();
+  const { me, signOut } = useAccount();
+  const router = useRouter();
+  const name = me?.account.fullName;
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -65,9 +75,11 @@ function ProfileMenu() {
     <div ref={box} className="relative shrink-0">
       <button ref={button} type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-haspopup="menu" aria-label={t.header.profileMenu}
         className="flex min-h-[44px] items-center gap-2.5 rounded-full p-1 hover:bg-brand-tint md:border md:border-line md:py-1.5 md:pl-1.5 md:pr-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand font-bold text-white">{t.sampleProfile.initials}</span>
+        <span className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${name ? "bg-brand text-white" : "bg-brand-light text-brand-dark"}`}>
+          {name ? initialsOf(name) : <PersonIcon />}
+        </span>
         <span className="hidden text-left leading-tight md:block">
-          <span className="block font-semibold text-ink">{t.sampleProfile.name}</span>
+          <span className="block max-w-[160px] truncate font-semibold text-ink">{name ?? t.header.signIn}</span>
           <span className="block text-sm text-muted">{t.header.profileSub}</span>
         </span>
         <span className="hidden text-muted md:block"><ChevronDown size={18} /></span>
@@ -88,12 +100,27 @@ function ProfileMenu() {
             ))}
           </div>
           <div className="my-1 border-t border-line" />
-          {/* Patient sign-in doesn't exist yet. */}
-          <button type="button" role="menuitem" disabled className={`${item} cursor-not-allowed text-muted hover:bg-transparent`}>
-            {t.header.signOut} <span className="ml-auto text-xs">{t.common.comingSoon}</span>
-          </button>
+          {name ? (
+            <button type="button" role="menuitem" className={item}
+              onClick={async () => { setOpen(false); await signOut(); router.push("/"); }}>
+              {t.header.signOut}
+            </button>
+          ) : (
+            <>
+              <Link role="menuitem" href="/login" className={`${item} font-semibold text-brand`} onClick={() => setOpen(false)}>{t.header.signIn}</Link>
+              <Link role="menuitem" href="/register" className={item} onClick={() => setOpen(false)}>{t.header.createAccount}</Link>
+            </>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function PersonIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+    </svg>
   );
 }

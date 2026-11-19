@@ -18,6 +18,7 @@ import {
 } from "@/lib/patientApi";
 import { addDays, shortTime, todayIST } from "@/lib/time";
 import { isIndianMobile } from "@/lib/validation";
+import { useAccount } from "./AccountProvider";
 import { ChevronLeft } from "./icons";
 import PatientHeader from "./PatientHeader";
 
@@ -43,6 +44,30 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
   const [errors, setErrors] = useState<Errors>({});
   const [serverError, setServerError] = useState("");
   const [busy, setBusy] = useState(false);
+  const { me, refresh } = useAccount();
+  // Signed in: who the token is for (a profile in the account), or "guest" for someone else.
+  const [who, setWho] = useState<string>("");
+
+  function choose(id: string) {
+    setWho(id);
+    setErrors({});
+    const m = me?.members.find((x) => x.id === id);
+    if (!m) {
+      setName(""); setMobile(""); setAge(""); setGender(""); setConsent(false);
+      return;
+    }
+    setName(m.name);
+    setMobile(m.phone ?? me?.account.phone ?? "");
+    setAge(m.age != null ? String(m.age) : "");
+    setGender(m.gender ?? "");
+    setConsent(m.recordsConsent);
+  }
+
+  // Once the account has loaded, start with the patient themselves.
+  useEffect(() => {
+    if (me && !who && me.members[0]) choose(me.members[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me]);
 
   useEffect(() => {
     if (USE_SAMPLE_DATA) return;
@@ -91,7 +116,9 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
         visitType: visit,
         patient: { name: name.trim(), phone: mobile, age: ageNum, gender: gender as Gender },
         recordsConsent: consent,
+        ...(who && who !== "guest" ? { memberId: who } : {}),
       });
+      if (who && who !== "guest") refresh();
       saveToken({
         bookingId: r.bookingId, code: r.trackingCode, token: r.token, date,
         doctorName: info.doctor.name, clinicName: info.clinic.name, patientName: name.trim(),
@@ -155,6 +182,21 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
 
         <fieldset className="flex flex-col gap-4" disabled={!anyBookable}>
           <legend className="mb-2 text-lg font-bold text-ink">{t.book.patient}</legend>
+          {me ? (
+            <div role="radiogroup" aria-label={t.book.who} className="no-scrollbar -mx-4 -mt-1 flex gap-2 overflow-x-auto px-4">
+              {[...me.members.map((m) => ({ id: m.id, label: m.relation === "SELF" ? `${m.name} (${t.book.you})` : m.name })), { id: "guest", label: t.book.someoneElse }].map((o) => (
+                <button key={o.id} type="button" role="radio" aria-checked={who === o.id} onClick={() => choose(o.id)}
+                  className={`min-h-[44px] shrink-0 rounded-full border-[1.5px] px-4 text-[15px] font-semibold ${who === o.id ? "border-brand bg-brand text-white" : "border-line bg-white text-ink hover:border-brand"}`}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          ) : me === null && (
+            <p className="-mt-1 rounded-2xl bg-brand-tint px-4 py-3 text-[15px] text-ink">
+              {t.book.signInPrompt}{" "}
+              <Link href={`/login?next=${encodeURIComponent(`/book/${doctorClinicId}`)}`} className="font-semibold text-brand underline underline-offset-4">{t.auth.signIn}</Link>
+            </p>
+          )}
           <div>
             <label htmlFor="book-name" className="mb-1.5 block font-semibold">{t.book.name}</label>
             <input id="book-name" autoComplete="name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} {...described("name")}

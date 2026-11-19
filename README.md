@@ -39,8 +39,11 @@ npm run dev                  # http://localhost:3000
 | `/location` | Choose location: current location, or state → district → area |
 | `/book/[doctorClinicId]` | Book a token: choose a day, add the patient, pay at the clinic |
 | `/track/[bookingId]?code=…` | The patient's token and the queue, live. No sign-in: the code in the link is the key |
-| `/tokens` | Tokens booked or opened on this phone (saved on the device) |
-| `/records`, `/profile` | Placeholders for the patient's records and profile |
+| `/tokens` | Tokens in the patient's account (any phone) plus ones booked or opened on this phone |
+| `/login`, `/register` | Patient sign-in and sign-up (mobile number or email + password). Separate from doctors' |
+| `/forgot-password`, `/reset-password?token=…` | Reset link by email (phone-only accounts: ask support for now) |
+| `/profile` | The account and its people (you + family). `/profile/[memberId]` edits one: basic, health, history, emergency contact, address, sharing. `/profile/new` adds a family member |
+| `/records` | Prescriptions and test reports per person: upload a photo or PDF, view, delete |
 | `/doctor/register` | Doctor registration in two steps: account (mobile number or email + password), then professional details |
 | `/doctor/profile` | Doctor only. Edit the professional profile patients see |
 | `/doctor/login` | Sign in for doctors and clinic staff (mobile number or email + password) |
@@ -68,6 +71,8 @@ The patient pages live in `app/(patient)/` (the folder name doesn't appear in UR
 - By default it calls the backend's `/api/public/*` endpoints through this site's `/api` proxy (`API_URL`).
 - Set `NEXT_PUBLIC_USE_SAMPLE_DATA=true` to use the fictional clinics and doctors in `lib/sampleData.ts` instead (e.g. for a demo without the backend). Restart `npm run dev` after changing it.
 - States, districts and areas outside Patna always come from the sample data until the backend has them.
+
+**Patient accounts** (`lib/patientAccount.ts`, `components/patient/AccountProvider.tsx`): optional. Guests can still book. Signed in, the booking page asks who the token is for and fills in their details; the doctor sees that person's health details and records only if "share" is ticked. Photos of prescriptions are shrunk in the browser before upload (`recordFile` in `lib/photo.ts`).
 
 **Language:** every patient string is in `lib/i18n/patient.ts` as two objects, `en` and `hi`, with the same keys (TypeScript checks Hindi isn't missing any). `useLang()` gives the current one, and the choice is saved on the device. **Location** is saved the same way (`lib/location.ts`).
 

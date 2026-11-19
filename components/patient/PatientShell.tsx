@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { LanguageProvider, useLang } from "@/lib/i18n/LanguageProvider";
+import { AccountProvider } from "./AccountProvider";
 import { HelpProvider, useHelp } from "./HelpDialog";
 import { FolderIcon, HelpIcon, HomeIcon, TicketIcon } from "./icons";
 
@@ -11,6 +12,7 @@ import { FolderIcon, HelpIcon, HomeIcon, TicketIcon } from "./icons";
 export default function PatientShell({ children }: { children: ReactNode }) {
   return (
     <LanguageProvider>
+      <AccountProvider>
       <HelpProvider>
         <div className="min-h-dvh bg-white pb-20 md:pb-0">
           {children}
@@ -18,6 +20,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
         </div>
         <BottomNav />
       </HelpProvider>
+      </AccountProvider>
     </LanguageProvider>
   );
 }

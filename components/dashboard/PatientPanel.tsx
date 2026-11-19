@@ -199,6 +199,37 @@ function Details({ data, can, busy, onEdit, onTestToggle }: {
         )}
       </Section>
 
+      {data.health && (
+        <Section title={t.panel.health}>
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-2.5 rounded-2xl border border-line bg-white px-4 py-3 sm:grid-cols-[auto_1fr]">
+            {([
+              ["bloodGroup", data.health.bloodGroup],
+              ["allergies", data.health.allergies],
+              ["conditions", data.health.conditions],
+              ["surgeries", data.health.surgeries],
+              ["medicines", data.health.medicines],
+            ] as const).filter(([, v]) => v).map(([k, v]) => (
+              <div key={k} className="contents">
+                <dt className="text-sm font-semibold text-muted">{t.panel.healthLabels[k]}</dt>
+                <dd className={`whitespace-pre-line ${k === "allergies" ? "font-semibold text-danger" : "text-ink"}`}>{v}</dd>
+              </div>
+            ))}
+            {data.health.emergencyContact && (
+              <div className="contents">
+                <dt className="text-sm font-semibold text-muted">{t.panel.healthLabels.emergency}</dt>
+                <dd className="text-ink">
+                  {[data.health.emergencyContact.name, data.health.emergencyContact.relation].filter(Boolean).join(", ")}
+                  {data.health.emergencyContact.phone && (
+                    <> · <a href={`tel:+91${data.health.emergencyContact.phone}`} className="font-semibold text-brand underline underline-offset-2">+91 {data.health.emergencyContact.phone}</a></>
+                  )}
+                </dd>
+              </div>
+            )}
+          </dl>
+          <p className="mt-2 text-sm text-muted">{t.panel.healthNote}</p>
+        </Section>
+      )}
+
       <Section title={t.panel.records}>
         {!data.recordsConsent ? (
           <p className="rounded-2xl border border-line bg-white px-4 py-3 text-muted">{t.panel.noConsent}</p>
