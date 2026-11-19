@@ -57,6 +57,11 @@ export default function TopBar({ me, doctor, clinicId, onClinicChange, date, onO
             </Link>
           )}
           {!isStaff && (
+            <Link href="/doctor/clinics" className="hidden rounded-full px-3 py-2 text-sm font-semibold text-brand hover:bg-brand-light sm:inline-flex">
+              {t.clinicPhotos.link}
+            </Link>
+          )}
+          {!isStaff && (
             <Link href="/doctor/staff" className="hidden rounded-full px-3 py-2 text-sm font-semibold text-brand hover:bg-brand-light sm:inline-flex">
               {t.access.staffLink}
             </Link>

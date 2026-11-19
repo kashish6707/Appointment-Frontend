@@ -13,6 +13,7 @@ export type DegreeDraft = { key: number; level: DegreeLevel; name: string; insti
 export type ProfileDraft = {
   photo: string | null; // a new photo (data URL) waiting to be uploaded
   photoUrl: string | null; // the current photo, when editing
+  photoConsent: boolean; // patients may see the photo and registration number
   specialisation: string;
   experienceYears: string;
   fee: string;
@@ -43,7 +44,7 @@ let nextKey = 1;
 
 export function emptyDraft(): ProfileDraft {
   return {
-    photo: null, photoUrl: null, specialisation: "", experienceYears: "", fee: "", registrationNo: "", medicalCouncil: "",
+    photo: null, photoUrl: null, photoConsent: true, specialisation: "", experienceYears: "", fee: "", registrationNo: "", medicalCouncil: "",
     degrees: [{ key: nextKey++, level: "UG", name: "", institute: "", year: "" }],
     expertise: [], achievements: "", about: "",
   };
@@ -53,6 +54,7 @@ export function draftFromProfile(p: OwnProfile): ProfileDraft {
   return {
     photo: null,
     photoUrl: p.photoUrl,
+    photoConsent: p.photoConsent,
     specialisation: p.specialisation ?? "",
     experienceYears: p.experienceYears != null ? String(p.experienceYears) : "",
     fee: p.fee != null ? String(p.fee) : "",
@@ -115,6 +117,7 @@ export function toInput(d: ProfileDraft): ProfileInput {
         ...(x.year ? { year: Number(x.year) } : {}),
       })),
     ...(d.photo ? { photo: d.photo } : {}),
+    photoConsent: d.photoConsent,
     ...(d.about.trim() ? { about: d.about.trim() } : {}),
     achievements: lines(d.achievements),
     expertise: d.expertise,
@@ -205,6 +208,10 @@ export default function ProfileFields({ draft, onChange, errors }: {
             <FieldError id="profile-photo" error={photoErr} />
           </div>
         </div>
+        <label className="mt-3 flex items-start gap-2.5 text-ink">
+          <input type="checkbox" checked={draft.photoConsent} onChange={(e) => set({ photoConsent: e.target.checked })} className="mt-0.5 h-5 w-5 shrink-0 accent-brand" />
+          <span>{t.profile.photoConsent}<span className="block text-sm text-muted">{t.profile.photoConsentHint}</span></span>
+        </label>
       </div>
 
       {/* Specialisation, experience, fee */}

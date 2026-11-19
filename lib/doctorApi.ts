@@ -408,12 +408,27 @@ export type OwnProfile = {
   expertise: string[];
   verified: boolean;
   registrationNo: string | null;
+  photoConsent: boolean;
   medicalCouncil: string | null;
   complete: boolean;
 };
 
 export const updateProfile = (input: ProfileInput & { fullName?: string }) =>
   request<OwnProfile>("/api/doctor/profile", { method: "PUT", body: JSON.stringify(input) });
+
+// --- clinic photos -------------------------------------------------------------------------
+
+export type ClinicPhoto = { id: string; large: string; small: string; width: number; height: number; addedBy: string | null };
+export type ClinicDetails = { id: string; name: string; coverPhotoId: string | null; photos: ClinicPhoto[]; maxPhotos: number };
+
+const clinicPath = (clinicId: string) => `/api/doctor/clinic-details/${clinicId}`;
+export const clinicDetailsKey = clinicPath;
+export const addClinicPhoto = (clinicId: string, image: string) =>
+  request<ClinicDetails>(`${clinicPath(clinicId)}/photos`, { method: "POST", body: JSON.stringify({ image }) });
+export const removeClinicPhoto = (clinicId: string, photoId: string) =>
+  request<ClinicDetails>(`${clinicPath(clinicId)}/photos/${photoId}`, { method: "DELETE" });
+export const setClinicCover = (clinicId: string, photoId: string) =>
+  request<ClinicDetails>(`${clinicPath(clinicId)}/cover`, { method: "PUT", body: JSON.stringify({ photoId }) });
 
 // --- adding a clinic ---------------------------------------------------------------------
 

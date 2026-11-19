@@ -80,3 +80,35 @@ export async function recordFile(file: File): Promise<string> {
     URL.revokeObjectURL(url);
   }
 }
+
+// --- clinic photos -----------------------------------------------------------------------
+
+const CLINIC_LONG_SIDE = 1600; // the server keeps 1200 px and 400 px copies
+
+/** A clinic photo as a JPEG data URL, shrunk to at most 1600 px on the long side. */
+export async function clinicPhoto(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new PhotoError("not-image");
+  if (file.size > MAX_INPUT_BYTES) throw new PhotoError("too-big");
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new PhotoError("unreadable"));
+      i.src = url;
+    });
+    if (Math.min(img.naturalWidth, img.naturalHeight) < 200) throw new PhotoError("too-small");
+    const scale = Math.min(1, CLINIC_LONG_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new PhotoError("unreadable");
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.85);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

@@ -15,6 +15,7 @@ export type ProfileInput = {
   registrationNo: string;
   medicalCouncil?: string;
   photo?: string;
+  photoConsent?: boolean;
   about?: string;
   achievements?: string[];
   expertise?: string[];
