@@ -18,6 +18,7 @@ export default function WalkInForm({ sessionId, doctorName, onAdded }: { session
   const [age, setAge] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
   const [phone, setPhone] = useState("");
+  const [whatsapp, setWhatsapp] = useState(true);
   const [errors, setErrors] = useState<Errors>({});
   const [serverError, setServerError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,7 +32,7 @@ export default function WalkInForm({ sessionId, doctorName, onAdded }: { session
     setBusy(true);
     try {
       const { booking, trackingCode } = await addWalkIn(sessionId, {
-        name: name.trim(), age: Number(age), gender: gender as Gender, ...(phone ? { phone } : {}), ...(force ? { overLimit: true } : {}),
+        name: name.trim(), age: Number(age), gender: gender as Gender, ...(phone ? { phone, whatsapp } : { whatsapp: false }), ...(force ? { overLimit: true } : {}),
       });
       onAdded(booking);
       setAdded({ booking, code: trackingCode, phone: phone || undefined });
@@ -96,6 +97,12 @@ export default function WalkInForm({ sessionId, doctorName, onAdded }: { session
             </div>
           </div>
           <TextField id="walkin-phone" label={t.walkIn.phone} prefix="+91" inputMode="numeric" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} error={errors.phone} />
+          {phone.length === 10 && (
+            <label className="-mt-1 flex cursor-pointer items-start gap-3 text-[15px] text-ink">
+              <input type="checkbox" checked={whatsapp} onChange={(e) => setWhatsapp(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#1F8A4C]" />
+              {t.walkIn.whatsapp}
+            </label>
+          )}
           {serverError && <p role="alert" className="rounded-xl border-[1.5px] border-danger bg-danger-light px-4 py-3 font-medium text-danger">{serverError}</p>}
           <button type="submit" disabled={busy} className={pill.primary}>{busy ? t.walkIn.adding : t.walkIn.submit}</button>
         </form>

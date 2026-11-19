@@ -149,6 +149,7 @@ export const en = {
     age: "Age",
     gender: "Gender",
     phone: "Mobile number (optional)",
+    whatsapp: "Send token updates on WhatsApp (ask the patient)",
     submit: "Add token",
     adding: "Adding…",
     added: (token: number, name: string) => `Walk-in added: token ${token}, ${name}.`,

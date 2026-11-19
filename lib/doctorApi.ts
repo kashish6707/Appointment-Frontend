@@ -183,7 +183,7 @@ export type QueueResult = {
   restored?: Booking[]; // reopen: the patient End OPD had marked as seen, back with the doctor
 };
 
-export type WalkInInput = { name: string; age: number; gender: Gender; phone?: string; visitType?: VisitType; overLimit?: boolean };
+export type WalkInInput = { name: string; age: number; gender: Gender; phone?: string; visitType?: VisitType; overLimit?: boolean; whatsapp?: boolean };
 
 // --- who is signed in, and staff access -------------------------------------------------
 

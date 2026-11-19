@@ -232,6 +232,9 @@ export type NewBooking = {
   visitType: VisitType;
   patient: { name: string; phone: string; age: number; gender: Gender };
   recordsConsent: boolean;
+  /** Token updates on WhatsApp at the patient's number, in this language. */
+  whatsapp?: boolean;
+  lang?: "en" | "hi";
 };
 
 export type BookingStatus = "WAITING" | "WITH_DOCTOR" | "DONE" | "SENT_FOR_TESTS" | "NO_SHOW" | "CANCELLED" | "PENDING_PAYMENT" | "PAYMENT_FAILED";

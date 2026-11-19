@@ -41,6 +41,7 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
   const [gender, setGender] = useState<Gender | "">("");
   const [visit, setVisit] = useState<VisitType>("NEW");
   const [consent, setConsent] = useState(false);
+  const [whatsapp, setWhatsapp] = useState(true);
   const [errors, setErrors] = useState<Errors>({});
   const [serverError, setServerError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -116,6 +117,8 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
         visitType: visit,
         patient: { name: name.trim(), phone: mobile, age: ageNum, gender: gender as Gender },
         recordsConsent: consent,
+        whatsapp,
+        lang,
         ...(who && who !== "guest" ? { memberId: who } : {}),
       });
       if (who && who !== "guest") refresh();
@@ -242,6 +245,13 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
               ))}
             </div>
           </div>
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-[#EAF7EF] px-3.5 py-3 text-[15px] text-ink">
+            <input type="checkbox" checked={whatsapp} onChange={(e) => setWhatsapp(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#1F8A4C]" />
+            <span>
+              <span className="font-semibold">{t.book.whatsapp}</span>
+              <span className="mt-0.5 block text-sm text-muted">{t.book.whatsappHint}</span>
+            </span>
+          </label>
           <label className="flex cursor-pointer items-start gap-3 text-[15px] text-ink">
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-brand" />
             {t.book.consent}
