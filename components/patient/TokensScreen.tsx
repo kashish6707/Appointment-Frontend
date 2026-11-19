@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLang } from "@/lib/i18n/LanguageProvider";
-import { forgetToken, saveToken, useSavedTokens } from "@/lib/myTokens";
+import { clearTokens, forgetToken, useSavedTokens } from "@/lib/myTokens";
 import { bookingLink, myBookings, type AccountBooking } from "@/lib/patientAccount";
 import { trackingPath } from "@/lib/patientApi";
 import { longDate, todayIST } from "@/lib/time";
@@ -47,7 +47,8 @@ export default function TokensScreen() {
     for (const x of device) {
       const found = byId.get(x.bookingId);
       if (found) found.code = x.code;
-      else byId.set(x.bookingId, { ...x, fromAccount: false });
+      // Signed in: only the account's tokens, never a previous guest's on this phone.
+      else if (!me) byId.set(x.bookingId, { ...x, fromAccount: false });
     }
     // Today's and upcoming first (soonest first), then past ones (latest first).
     return [...byId.values()].sort((a, b) => {
@@ -64,7 +65,6 @@ export default function TokensScreen() {
     setError("");
     try {
       const { code } = await bookingLink(r.bookingId);
-      saveToken({ bookingId: r.bookingId, code, token: r.token, date: r.date, doctorName: r.doctorName, clinicName: r.clinicName, patientName: r.patientName });
       router.push(trackingPath(r.bookingId, code));
     } catch {
       setError(t.common.loadError);
@@ -117,6 +117,11 @@ export default function TokensScreen() {
           </ul>
         )}
         {rows && rows.length > 0 && <p className="text-center text-sm text-muted">{me ? t.tokens.inAccount : t.tokens.onDevice}</p>}
+        {!me && !!device?.length && (
+          <button type="button" onClick={clearTokens} className="mx-auto min-h-[44px] px-4 text-[15px] font-semibold text-muted underline underline-offset-4">
+            {t.tokens.clear}
+          </button>
+        )}
         {me === null && (
           <p className="text-center text-[15px] text-muted">
             {t.tokens.signInHint} <Link href="/login?next=/tokens" className="font-semibold text-brand underline underline-offset-4">{t.auth.signIn}</Link>

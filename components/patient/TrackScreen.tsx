@@ -8,6 +8,7 @@ import { loadTokens, saveToken } from "@/lib/myTokens";
 import { cancelBooking, getTracking, type Tracking } from "@/lib/patientApi";
 import { clockTime, longDate, shortTime, todayIST } from "@/lib/time";
 import { useTrackingLive } from "@/lib/useTrackingLive";
+import { useAccount } from "./AccountProvider";
 import { ClockIcon } from "./icons";
 import PatientHeader from "./PatientHeader";
 
@@ -23,6 +24,9 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
   const [cancelling, setCancelling] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { me } = useAccount();
+  const signedOut = useRef(false);
+  signedOut.current = me === null;
 
   const load = useCallback(async () => {
     if (!code) return setError(t.track.notFound);
@@ -31,8 +35,8 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
       setData(r);
       setError("");
       setUpdatedAt(new Date());
-      // Keep it in "My tokens" on this device, e.g. when opened from a shared link.
-      if (!loadTokens().some((x) => x.bookingId === bookingId)) {
+      // Not signed in: keep it in "My tokens" on this device, e.g. when opened from a shared link.
+      if (signedOut.current && !loadTokens().some((x) => x.bookingId === bookingId)) {
         saveToken({ bookingId, code, token: r.token, date: r.date, doctorName: r.doctorName, clinicName: r.clinicName, patientName: "" });
       }
     } catch (e) {

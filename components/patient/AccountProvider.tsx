@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { clearTokens } from "@/lib/myTokens";
 import { getMe, signOut as apiSignOut, type Me } from "@/lib/patientAccount";
 
 type AccountState = {
@@ -34,6 +35,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     try {
       await apiSignOut();
     } finally {
+      clearTokens(); // nothing of this account stays on a shared phone
       setMe(null);
     }
   }, []);

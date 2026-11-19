@@ -119,7 +119,8 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
         ...(who && who !== "guest" ? { memberId: who } : {}),
       });
       if (who && who !== "guest") refresh();
-      saveToken({
+      // Signed in: the token is in the account. Otherwise keep it on this phone to find it again.
+      if (!me) saveToken({
         bookingId: r.bookingId, code: r.trackingCode, token: r.token, date,
         doctorName: info.doctor.name, clinicName: info.clinic.name, patientName: name.trim(),
       });
