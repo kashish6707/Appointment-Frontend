@@ -115,6 +115,17 @@ export default function HomeScreen() {
         <section aria-labelledby="dept-title">
           <h2 id="dept-title" className="mb-3 text-xl font-bold text-ink">{t.departments.title}</h2>
           <ul className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:gap-4">
+            {departments.length > 0 && (
+              <li className="snap-start">
+                <button type="button" onClick={() => setDepartment(null)} aria-pressed={department === null}
+                  className="flex w-[76px] flex-col items-center gap-1.5 rounded-2xl p-1 text-center lg:w-[96px]">
+                  <span className={`flex h-16 w-16 items-center justify-center rounded-full transition-colors lg:h-[84px] lg:w-[84px] ${department === null ? "bg-brand text-white" : "bg-brand-light text-brand-dark"}`}>
+                    <DepartmentIcon iconKey="all" />
+                  </span>
+                  <span className={`text-[14px] font-semibold leading-tight ${department === null ? "text-brand-dark" : "text-ink"}`}>{t.departments.all}</span>
+                </button>
+              </li>
+            )}
             {(departments.length ? departments : Array.from({ length: 8 }, () => null)).map((d, i) => (
               <li key={d?.key ?? i} className="snap-start">
                 {d ? (

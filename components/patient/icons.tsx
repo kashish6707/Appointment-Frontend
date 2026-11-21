@@ -44,6 +44,8 @@ export function DepartmentIcon({ iconKey, size = 30 }: { iconKey: string; size?:
       return <Svg {...s}><circle cx="12" cy="12" r="8" /><path d="M9 14c1.5 1.5 4.5 1.5 6 0M9.5 10v.1M14.5 10v.1M12 4a2 2 0 0 0 2 2" /></Svg>;
     case "skin":
       return <Svg {...s}><path d="M7 21V9a5 5 0 0 1 10 0v12" /><path d="M10 11v.1M14 14v.1M11 17v.1" /></Svg>;
+    case "all":
+      return <Svg {...s}><rect x="4" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" /></Svg>;
     case "eye":
       return <Svg {...s}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></Svg>;
     case "heart":

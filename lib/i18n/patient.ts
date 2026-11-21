@@ -31,6 +31,7 @@ const en = {
   },
   departments: {
     title: "Departments",
+    all: "All",
     showing: (name: string) => `Showing: ${name}`,
     clear: (name: string) => `Stop showing only ${name}`,
     names: {
@@ -141,6 +142,9 @@ const en = {
     title: "Book a token",
     fee: (n: number) => `Fee ₹${n}, pay at the clinic`,
     chooseDay: "Choose a day",
+    chooseTime: "Choose a time",
+    timeHint: "Come to the clinic in this hour. Token numbers follow the time, so earlier hours are seen first.",
+    timeOver: "Over",
     today: "Today",
     tomorrow: "Tomorrow",
     hours: (start: string, end: string) => `${start} – ${end}`,
@@ -170,6 +174,7 @@ const en = {
     signInPrompt: "Have an account? Sign in to fill this in and keep the token in your family’s records.",
     errors: {
       day: "Choose a day.",
+      time: "Choose a time for your visit.",
       name: "Enter the patient’s full name.",
       mobile: "Enter a 10-digit mobile number starting with 6, 7, 8 or 9.",
       age: "Enter age in years, from 0 to 120.",
@@ -179,6 +184,7 @@ const en = {
   track: {
     title: "Your token",
     tokenLabel: "Token number",
+    yourTime: (range: string) => `Your time: ${range}`,
     nowServing: "Now serving",
     ahead: (n: number) => (n === 0 ? "You’re next" : `${n} ${n === 1 ? "patient" : "patients"} ahead of you`),
     wait: (m: number) => `About ${m} min wait`,
@@ -219,6 +225,12 @@ const en = {
     cancelConfirm: "Cancel this token? Someone else may take your place.",
     cancelYes: "Yes, cancel",
     keep: "Keep token",
+    changeDay: "Change day",
+    changeTitle: "Move your token to another day",
+    changeIntro: "You get a new token number for the day you choose, and this token is cancelled.",
+    changeTo: (day: string) => `Move to ${day}`,
+    changing: "Moving…",
+    noOtherDays: "No other days are open for booking right now.",
     saveHint: "Keep this page. You can open it from anywhere to see the queue.",
     messages: "Messages",
     notFound: "We couldn’t find this token. Check the link and try again.",
@@ -430,6 +442,7 @@ const hi: PatientStrings = {
   },
   departments: {
     title: "विभाग",
+    all: "सभी",
     showing: (name) => `दिखा रहे हैं: ${name}`,
     clear: (name) => `सिर्फ़ ${name} दिखाना बंद करें`,
     names: {
@@ -540,6 +553,9 @@ const hi: PatientStrings = {
     title: "टोकन बुक करें",
     fee: (n: number) => `फ़ीस ₹${n}, क्लिनिक पर दें`,
     chooseDay: "दिन चुनें",
+    chooseTime: "समय चुनें",
+    timeHint: "इसी समय में क्लिनिक आएँ। टोकन नंबर समय के हिसाब से हैं, इसलिए पहले वाले समय के मरीज़ पहले देखे जाते हैं।",
+    timeOver: "खत्म",
     today: "आज",
     tomorrow: "कल",
     hours: (start: string, end: string) => `${start} – ${end}`,
@@ -569,6 +585,7 @@ const hi: PatientStrings = {
     signInPrompt: "अकाउंट है? साइन इन करें, जानकारी अपने-आप भर जाएगी और टोकन परिवार के रिकॉर्ड में रहेगा।",
     errors: {
       day: "दिन चुनें।",
+      time: "आने का समय चुनें।",
       name: "मरीज़ का पूरा नाम लिखें।",
       mobile: "6, 7, 8 या 9 से शुरू होने वाला 10 अंकों का मोबाइल नंबर लिखें।",
       age: "उम्र साल में लिखें, 0 से 120 तक।",
@@ -578,6 +595,7 @@ const hi: PatientStrings = {
   track: {
     title: "आपका टोकन",
     tokenLabel: "टोकन नंबर",
+    yourTime: (range: string) => `आपका समय: ${range}`,
     nowServing: "अभी चल रहा है",
     ahead: (n: number) => (n === 0 ? "अगला नंबर आपका है" : `आपसे पहले ${n} मरीज़`),
     wait: (m: number) => `लगभग ${m} मिनट इंतज़ार`,
@@ -618,6 +636,12 @@ const hi: PatientStrings = {
     cancelConfirm: "यह टोकन रद्द करें? आपकी जगह कोई और ले सकता है।",
     cancelYes: "हाँ, रद्द करें",
     keep: "टोकन रखें",
+    changeDay: "दिन बदलें",
+    changeTitle: "टोकन किसी और दिन पर ले जाएँ",
+    changeIntro: "चुने गए दिन के लिए नया टोकन नंबर मिलेगा, और यह टोकन रद्द हो जाएगा।",
+    changeTo: (day) => `${day} पर ले जाएँ`,
+    changing: "बदल रहे हैं…",
+    noOtherDays: "अभी बुकिंग के लिए कोई और दिन खुला नहीं है।",
     saveHint: "यह पेज संभाल कर रखें। कहीं से भी खोलकर लाइन देख सकते हैं।",
     messages: "संदेश",
     notFound: "यह टोकन नहीं मिला। लिंक जाँच कर फिर कोशिश करें।",

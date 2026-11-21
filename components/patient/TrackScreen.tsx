@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api";
 import { useLang } from "@/lib/i18n/LanguageProvider";
-import { loadTokens, saveToken } from "@/lib/myTokens";
-import { cancelBooking, getTracking, type Tracking } from "@/lib/patientApi";
-import { clockTime, longDate, shortTime, todayIST } from "@/lib/time";
+import { forgetToken, loadTokens, saveToken } from "@/lib/myTokens";
+import { cancelBooking, getAvailability, getTracking, rescheduleBooking, trackingPath, type BookingDay, type Tracking } from "@/lib/patientApi";
+import { addDays, clockTime, longDate, shortTime, todayIST } from "@/lib/time";
 import { alertPatient, askForNotifications, notificationsAllowed, notificationsSupported, unlockSound } from "@/lib/queueAlert";
 import { useTrackingLive } from "@/lib/useTrackingLive";
 import { useAccount } from "./AccountProvider";
@@ -24,6 +25,7 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
   const [copied, setCopied] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const [changing, setChanging] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastStage = useRef<string | null>(null);
   const tRef = useRef(t);
@@ -47,7 +49,8 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
       setError("");
       setUpdatedAt(new Date());
       // Not signed in: keep it in "My tokens" on this device, e.g. when opened from a shared link.
-      if (signedOut.current && !loadTokens().some((x) => x.bookingId === bookingId)) {
+      // (Not a cancelled one: e.g. after "Change day" the old token is gone from the list.)
+      if (signedOut.current && r.status !== "CANCELLED" && !loadTokens().some((x) => x.bookingId === bookingId)) {
         saveToken({ bookingId, code, token: r.token, date: r.date, doctorName: r.doctorName, clinicName: r.clinicName, patientName: "" });
       }
     } catch (e) {
@@ -166,6 +169,9 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
               <p className="text-lg font-bold text-ink">{data.doctorName}</p>
               <p className="text-[15px] text-muted">{data.clinicName}</p>
               <p className="mt-1 text-[15px] font-semibold text-ink">{longDate(data.date)}</p>
+              {data.slotStart && data.slotEnd && (
+                <p className="text-[15px] font-semibold text-brand-dark">{t.track.yourTime(`${shortTime(data.slotStart)} – ${shortTime(data.slotEnd)}`)}</p>
+              )}
             </div>
             <div className="shrink-0 text-center">
               <p className="text-sm font-semibold text-muted">{t.track.tokenLabel}</p>
@@ -224,9 +230,16 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
           </>
         )}
         {waiting && (
-          <button type="button" onClick={() => dialog.current?.showModal()} className="mx-auto min-h-[44px] px-4 font-semibold text-danger underline underline-offset-4">
-            {t.track.cancel}
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-x-4">
+            {data.doctorClinicId && (
+              <button type="button" onClick={() => setChanging(true)} className="min-h-[44px] px-4 font-semibold text-brand underline underline-offset-4">
+                {t.track.changeDay}
+              </button>
+            )}
+            <button type="button" onClick={() => dialog.current?.showModal()} className="min-h-[44px] px-4 font-semibold text-danger underline underline-offset-4">
+              {t.track.cancel}
+            </button>
+          </div>
         )}
       </div>
     );
@@ -251,7 +264,112 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
           <button type="button" onClick={() => dialog.current?.close()} className="min-h-[48px] rounded-full border-[1.5px] border-line px-5 font-semibold">{t.track.keep}</button>
         </div>
       </dialog>
+      {changing && data?.doctorClinicId && (
+        <ChangeDayDialog bookingId={bookingId} code={code} tracking={data} onClose={() => setChanging(false)} />
+      )}
     </>
+  );
+}
+
+/** Pick another day; the token moves there (new number) and this one is cancelled. */
+function ChangeDayDialog({ bookingId, code, tracking, onClose }: { bookingId: string; code: string; tracking: Tracking; onClose: () => void }) {
+  const { t, lang } = useLang();
+  const { me } = useAccount();
+  const router = useRouter();
+  const ref = useRef<HTMLDialogElement>(null);
+  const [days, setDays] = useState<BookingDay[] | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [hour, setHour] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    ref.current?.showModal();
+    getAvailability(tracking.doctorClinicId!).then(
+      (a) => setDays(a.days.filter((d) => d.date !== tracking.date)),
+      (e) => setError(e instanceof ApiError ? e.message : t.common.loadError),
+    );
+  }, [tracking.doctorClinicId, tracking.date, t.common.loadError]);
+
+  const today = todayIST();
+  const locale = lang === "hi" ? "hi-IN" : "en-IN";
+  const dayName = (d: string) =>
+    d === today ? t.book.today : d === addDays(today, 1) ? t.book.tomorrow
+      : new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(new Date(`${d}T12:00:00Z`));
+  const dayNum = (d: string) => new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${d}T12:00:00Z`));
+  const dayState = (d: BookingDay) =>
+    d.bookable ? (d.left != null ? t.book.left(d.left) : d.start && d.end ? t.book.hours(shortTime(d.start), shortTime(d.end)) : "")
+      : d.reason === "FULL" ? t.book.full : d.reason === "HOURS_OVER" ? t.book.over : t.book.off;
+
+  async function move() {
+    if (!picked) return;
+    setBusy(true);
+    setError("");
+    try {
+      const r = await rescheduleBooking(bookingId, code, picked, hours.length ? hour ?? undefined : undefined);
+      // Signed in: the account lists the new token. Otherwise swap it on this phone.
+      if (!me) {
+        forgetToken(bookingId);
+        saveToken({ bookingId: r.bookingId, code: r.trackingCode, token: r.token, date: r.date, doctorName: tracking.doctorName, clinicName: tracking.clinicName, patientName: "" });
+      }
+      router.replace(trackingPath(r.bookingId, r.trackingCode));
+      close();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : t.common.loadError);
+      setBusy(false);
+    }
+  }
+
+  const close = () => {
+    ref.current?.close();
+    onClose();
+  };
+  const open = days?.filter((d) => d.bookable) ?? [];
+  const hours = days?.find((d) => d.date === picked)?.hours ?? [];
+  const ready = !!picked && (!hours.length || hours.some((h) => h.start === hour && h.bookable));
+  return (
+    <dialog ref={ref} aria-labelledby="change-title" onCancel={onClose}
+      onClick={(e) => e.target === ref.current && close()}
+      className="m-auto w-[calc(100%-24px)] max-w-md rounded-[22px] border border-line p-6 text-ink shadow-soft backdrop:bg-ink/50">
+      <h2 id="change-title" className="text-lg font-bold">{t.track.changeTitle}</h2>
+      <p className="mt-1 text-[15px] text-muted">{t.track.changeIntro}</p>
+      {!days && !error && <div className="mt-4 h-[84px] animate-pulse rounded-2xl bg-brand-tint motion-reduce:animate-none" />}
+      {days && open.length === 0 && <p className="mt-4 rounded-xl bg-brand-tint px-4 py-3 text-[15px]">{t.track.noOtherDays}</p>}
+      {days && open.length > 0 && (
+        <div role="radiogroup" aria-labelledby="change-title" className="no-scrollbar -mx-6 mt-4 flex gap-2 overflow-x-auto px-6 pb-1">
+          {days.map((d) => (
+            <button key={d.date} type="button" role="radio" aria-checked={picked === d.date} disabled={!d.bookable || busy}
+              onClick={() => { setPicked(d.date); setHour(null); }}
+              className={`flex w-[92px] shrink-0 flex-col items-center rounded-2xl border-[1.5px] px-2 py-2.5 text-center disabled:opacity-45 ${picked === d.date ? "border-brand bg-brand text-white" : "border-line bg-white"}`}>
+              <span className="text-[15px] font-bold">{dayName(d.date)}</span>
+              <span className="text-sm">{dayNum(d.date)}</span>
+              <span className={`mt-0.5 text-xs font-semibold ${picked === d.date ? "text-white" : "text-muted"}`}>{dayState(d)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {hours.length > 0 && (
+        <div className="mt-4">
+          <p id="change-time" className="font-bold">{t.book.chooseTime}</p>
+          <div role="radiogroup" aria-labelledby="change-time" className="mt-2 grid grid-cols-2 gap-2">
+            {hours.filter((h) => !h.over).map((h) => (
+              <button key={h.start} type="button" role="radio" aria-checked={hour === h.start} disabled={!h.bookable || busy} onClick={() => setHour(h.start)}
+                className={`flex flex-col items-center rounded-2xl border-[1.5px] px-2 py-2 text-center disabled:opacity-45 ${hour === h.start ? "border-brand bg-brand text-white" : "border-line bg-white"}`}>
+                <span className="text-[15px] font-bold">{shortTime(h.start)} – {shortTime(h.end)}</span>
+                <span className={`text-xs font-semibold ${hour === h.start ? "text-white" : "text-muted"}`}>{h.over ? t.book.timeOver : h.left > 0 ? t.book.left(h.left) : t.book.full}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {error && <p role="alert" className="mt-3 rounded-xl bg-danger-light px-4 py-3 font-medium text-danger">{error}</p>}
+      <div className="mt-5 flex flex-col gap-2.5">
+        <button type="button" onClick={move} disabled={!ready || busy} className="min-h-[48px] rounded-full bg-brand px-5 font-semibold text-white disabled:opacity-50">
+          {busy ? t.track.changing : picked ? t.track.changeTo(`${dayName(picked)}, ${dayNum(picked)}`) : t.track.changeDay}
+        </button>
+        <button type="button" onClick={close} className="min-h-[48px] rounded-full border-[1.5px] border-line px-5 font-semibold">{t.track.keep}</button>
+      </div>
+    </dialog>
   );
 }
 

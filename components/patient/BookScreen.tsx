@@ -22,7 +22,7 @@ import { useAccount } from "./AccountProvider";
 import { ChevronLeft } from "./icons";
 import PatientHeader from "./PatientHeader";
 
-type Field = "day" | "name" | "mobile" | "age" | "gender";
+type Field = "day" | "time" | "name" | "mobile" | "age" | "gender";
 type Errors = Partial<Record<Field, string>>;
 
 const GENDERS: Gender[] = ["MALE", "FEMALE", "OTHER"];
@@ -35,6 +35,7 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
   const [info, setInfo] = useState<Availability | null>(null);
   const [loadError, setLoadError] = useState("");
   const [date, setDate] = useState("");
+  const [hour, setHour] = useState(""); // the hour chosen, when the clinic limits tokens per hour
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [age, setAge] = useState("");
@@ -98,13 +99,15 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
     const e: Errors = {};
     const ageNum = Number(age);
     if (!date) e.day = t.book.errors.day;
+    const dayHours = info.days.find((d) => d.date === date)?.hours ?? [];
+    if (date && dayHours.length && !dayHours.some((h) => h.start === hour && h.bookable)) e.time = t.book.errors.time;
     if (name.trim().length < 2) e.name = t.book.errors.name;
     if (!isIndianMobile(mobile)) e.mobile = t.book.errors.mobile;
     if (age === "" || !Number.isInteger(ageNum) || ageNum < 0 || ageNum > 120) e.age = t.book.errors.age;
     if (!gender) e.gender = t.book.errors.gender;
     setErrors(e);
     setServerError("");
-    const first = (["day", "name", "mobile", "age", "gender"] as Field[]).find((k) => e[k]);
+    const first = (["day", "time", "name", "mobile", "age", "gender"] as Field[]).find((k) => e[k]);
     if (first) {
       document.getElementById(`book-${first}`)?.focus();
       return;
@@ -119,6 +122,7 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
         recordsConsent: consent,
         whatsapp,
         lang,
+        ...(dayHours.length ? { slotStart: hour } : {}),
         ...(who && who !== "guest" ? { memberId: who } : {}),
       });
       if (who && who !== "guest") refresh();
@@ -172,7 +176,7 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
               {info.days.map((d) => (
                 <label key={d.date} className={`flex min-w-[92px] shrink-0 flex-col items-center rounded-2xl border-[1.5px] px-3 py-2.5 text-center ${
                   !d.bookable ? "cursor-not-allowed border-line bg-brand-tint/60 text-muted" : date === d.date ? "cursor-pointer border-brand bg-brand text-white" : "cursor-pointer border-line bg-white text-ink hover:border-brand"}`}>
-                  <input type="radio" name="day" value={d.date} checked={date === d.date} disabled={!d.bookable} onChange={() => setDate(d.date)} className="sr-only" />
+                  <input type="radio" name="day" value={d.date} checked={date === d.date} disabled={!d.bookable} onChange={() => { setDate(d.date); setHour(""); }} className="sr-only" />
                   <span className="text-[15px] font-bold">{dayName(d.date)}</span>
                   <span className="text-sm">{dayNum(d.date)}</span>
                   <span className={`mt-0.5 text-xs font-semibold ${date === d.date && d.bookable ? "text-white" : d.bookable ? "text-brand-dark" : ""}`}>{dayState(d)}</span>
@@ -183,6 +187,26 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
           {errorText("day")}
           {info.days.find((d) => d.date === date)?.note && <p className="mt-2 text-[15px] text-muted">{info.days.find((d) => d.date === date)?.note}</p>}
         </fieldset>
+
+        {!!info.days.find((d) => d.date === date)?.hours?.length && (
+          <fieldset>
+            <legend className="mb-1 text-lg font-bold text-ink">{t.book.chooseTime}</legend>
+            <p className="mb-2 text-[15px] text-muted">{t.book.timeHint}</p>
+            <div id="book-time" tabIndex={-1} className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {info.days.find((d) => d.date === date)!.hours!.filter((h) => !h.over).map((h) => (
+                <label key={h.start} className={`flex flex-col items-center rounded-2xl border-[1.5px] px-3 py-2.5 text-center ${
+                  !h.bookable ? "cursor-not-allowed border-line bg-brand-tint/60 text-muted" : hour === h.start ? "cursor-pointer border-brand bg-brand text-white" : "cursor-pointer border-line bg-white text-ink hover:border-brand"}`}>
+                  <input type="radio" name="time" value={h.start} checked={hour === h.start} disabled={!h.bookable} onChange={() => setHour(h.start)} className="sr-only" {...described("time")} />
+                  <span className="text-[15px] font-bold">{shortTime(h.start)} – {shortTime(h.end)}</span>
+                  <span className={`mt-0.5 text-xs font-semibold ${hour === h.start && h.bookable ? "text-white" : h.bookable ? "text-brand-dark" : ""}`}>
+                    {h.over ? t.book.timeOver : h.left > 0 ? t.book.left(h.left) : t.book.full}
+                  </span>
+                </label>
+              ))}
+            </div>
+            {errorText("time")}
+          </fieldset>
+        )}
 
         <fieldset className="flex flex-col gap-4" disabled={!anyBookable}>
           <legend className="mb-2 text-lg font-bold text-ink">{t.book.patient}</legend>

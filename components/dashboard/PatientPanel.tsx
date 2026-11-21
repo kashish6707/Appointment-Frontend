@@ -9,6 +9,7 @@ import {
   keys,
   sendForTests,
   setBookingStatus,
+  setConsultMinutes,
   setTestStatus,
   type Booking,
   type BookingDetail,
@@ -276,7 +277,8 @@ function Actions({ data, can, busy, run, testsOpen, setTestsOpen }: {
   const canCall = can("queue.call") && booking.status === "WAITING";
   const canTests = can("tests.manage");
   const canSeen = can("bookings.outcome");
-  if (settled || (!canCall && !canTests && !canSeen)) return null;
+  const canTime = can("queue.call") && (booking.status === "WAITING" || booking.status === "WITH_DOCTOR") && session.status !== "CLOSED";
+  if (settled || (!canCall && !canTests && !canSeen && !canTime)) return null;
 
   return (
     <div className="border-t border-line bg-white px-5 py-4">
@@ -294,6 +296,24 @@ function Actions({ data, can, busy, run, testsOpen, setTestsOpen }: {
         />
       ) : (
         <div className="flex flex-col gap-2.5">
+          {canTime && (
+            <div role="group" aria-labelledby="time-needed" className="mb-1">
+              <p id="time-needed" className="text-sm font-semibold text-ink">{t.panel.timeNeeded}</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {[null, 5, 10, 15, 20, 30, 45].map((m) => {
+                  const on = (booking.consultMinutes ?? null) === m;
+                  return (
+                    <button key={m ?? "usual"} type="button" aria-pressed={on} disabled={!!busy}
+                      onClick={() => !on && run("time", async () => ({ booking: await setConsultMinutes(booking.id, m) }))}
+                      className={`min-h-[36px] rounded-full border-[1.5px] px-3 text-sm font-semibold ${on ? "border-brand bg-brand text-white" : "border-line bg-white text-ink hover:border-brand"}`}>
+                      {m == null ? t.panel.usualTime : t.panel.minutes(m)}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-xs text-muted">{t.panel.timeNeededHint}</p>
+            </div>
+          )}
           {canCall && (
             <button type="button" className={pill.primary} disabled={!running || !!busy} onClick={() => run("call", async () => {
               const r = await callPatient(booking.id);

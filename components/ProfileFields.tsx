@@ -13,7 +13,7 @@ export type DegreeDraft = { key: number; level: DegreeLevel; name: string; insti
 export type ProfileDraft = {
   photo: string | null; // a new photo (data URL) waiting to be uploaded
   photoUrl: string | null; // the current photo, when editing
-  photoConsent: boolean; // patients may see the photo and registration number
+  photoConsent: boolean; // patients may see the registration number
   specialisation: string;
   experienceYears: string;
   fee: string;
@@ -208,10 +208,6 @@ export default function ProfileFields({ draft, onChange, errors }: {
             <FieldError id="profile-photo" error={photoErr} />
           </div>
         </div>
-        <label className="mt-3 flex items-start gap-2.5 text-ink">
-          <input type="checkbox" checked={draft.photoConsent} onChange={(e) => set({ photoConsent: e.target.checked })} className="mt-0.5 h-5 w-5 shrink-0 accent-brand" />
-          <span>{t.profile.photoConsent}<span className="block text-sm text-muted">{t.profile.photoConsentHint}</span></span>
-        </label>
       </div>
 
       {/* Specialisation, experience, fee */}
@@ -231,6 +227,10 @@ export default function ProfileFields({ draft, onChange, errors }: {
       <div className="grid gap-5">
         <TextField id="profile-registration" label={t.profile.registrationNo} value={draft.registrationNo} maxLength={30} autoComplete="off"
           onChange={(e) => set({ registrationNo: e.target.value })} error={errors["profile-registration"]} hint={t.profile.registrationHint} />
+        <label className="-mt-2 flex items-start gap-2.5 text-ink">
+          <input type="checkbox" checked={draft.photoConsent} onChange={(e) => set({ photoConsent: e.target.checked })} className="mt-0.5 h-5 w-5 shrink-0 accent-brand" />
+          <span>{t.profile.photoConsent}<span className="block text-sm text-muted">{t.profile.photoConsentHint}</span></span>
+        </label>
         <TextField id="profile-council" label={t.profile.council} value={draft.medicalCouncil} maxLength={100}
           onChange={(e) => set({ medicalCouncil: e.target.value })} hint={t.profile.councilHint} />
       </div>

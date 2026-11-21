@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Booking, BookingStatus } from "@/lib/doctorApi";
 import { t } from "@/lib/strings";
-import { clockTime, hhmm } from "@/lib/time";
+import { clockTime, hhmm, shortTime } from "@/lib/time";
 import { Card, StatusChip } from "./ui";
 
 type Filter = "all" | "WAITING" | "DONE" | "SENT_FOR_TESTS";
@@ -66,6 +66,7 @@ export default function Bookings({ title, bookings, highlighted, onOpen, expecte
                       {t.ageGender(b.patient.age, b.patient.gender)} · {t.visitType[b.visitType]}
                     </span>
                     <span className="block text-sm text-muted">{t.source[b.source]} · {clockTime(b.bookedAt)}</span>
+                    {b.slotStart && <span className="block text-sm text-ink">{t.bookings.chosenHour(shortTime(b.slotStart))}</span>}
                     {expectedFor(b) && <span className="block text-sm font-semibold text-brand-dark">{t.bookings.expectedAt(hhmm(expectedFor(b)!))}</span>}
                   </span>
                   <StatusChip status={b.status} />
@@ -99,6 +100,7 @@ export default function Bookings({ title, bookings, highlighted, onOpen, expecte
                     <td className="border-b border-line px-3 py-3">
                       <span className="block font-semibold text-ink">{b.patient.name}</span>
                       <span className="block text-sm text-muted">{t.ageGender(b.patient.age, b.patient.gender)}</span>
+                      {b.slotStart && <span className="block text-sm text-ink">{t.bookings.chosenHour(shortTime(b.slotStart))}</span>}
                     </td>
                     <td className="border-b border-line px-3 py-3 text-ink">{t.visitType[b.visitType]}</td>
                     <td className="border-b border-line px-3 py-3">

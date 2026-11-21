@@ -63,6 +63,10 @@ export type Booking = {
   sessionId: string;
   doctorClinicId: string;
   token: number;
+  /** The hour the patient chose ("10:00"), when the clinic limits tokens per hour. */
+  slotStart?: string | null;
+  /** Minutes this patient will need with the doctor, when set (else the clinic's usual time). */
+  consultMinutes?: number | null;
   status: BookingStatus;
   visitType: VisitType;
   source: BookingSource;
@@ -281,6 +285,10 @@ export const extendBreak = (sessionId: string, minutes: number) =>
 
 export const callPatient = (bookingId: string) => post<QueueResult>(`/api/doctor/bookings/${bookingId}/call`);
 
+/** How long this patient will need (null: the usual time). Later patients' expected times move. */
+export const setConsultMinutes = (bookingId: string, minutes: number | null) =>
+  request<Booking>(`/api/doctor/bookings/${bookingId}/consult-minutes`, { method: "PUT", body: JSON.stringify({ minutes }) });
+
 export const setBookingStatus = (bookingId: string, status: "DONE" | "SENT_FOR_TESTS" | "NO_SHOW") =>
   request<Booking>(`/api/doctor/bookings/${bookingId}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
 
@@ -370,6 +378,10 @@ export type Schedule = {
   exceptions: DateException[];
   upcoming: (DayPlan & { booked: number })[];
   bookingWindowDays: number;
+  /** Most tokens patients can book in each hour of OPD; null = no hourly limit. */
+  tokensPerHour: number | null;
+  /** How long the doctor usually takes per patient; null = measured each day. */
+  minutesPerPatient: number | null;
   cancelled?: number; // after a change that cancelled bookings
   refunded?: number;
 };
@@ -386,6 +398,12 @@ export type ExceptionInput = {
 /** confirmCancel: the doctor agreed to cancel (and refund) bookings on days the change takes away. */
 export const saveWeekly = (doctorClinicId: string, days: WeeklyDay[], confirmCancel = false) =>
   request<Schedule>(`/api/doctor/clinics/${doctorClinicId}/weekly`, { method: "PUT", body: JSON.stringify({ days, confirmCancel }) });
+
+export const saveTokensPerHour = (doctorClinicId: string, tokensPerHour: number | null) =>
+  request<Schedule>(`/api/doctor/clinics/${doctorClinicId}/tokens-per-hour`, { method: "PUT", body: JSON.stringify({ tokensPerHour }) });
+
+export const saveMinutesPerPatient = (doctorClinicId: string, minutesPerPatient: number | null) =>
+  request<Schedule>(`/api/doctor/clinics/${doctorClinicId}/minutes-per-patient`, { method: "PUT", body: JSON.stringify({ minutesPerPatient }) });
 
 export const addException = (doctorClinicId: string, input: ExceptionInput, confirmCancel = false) =>
   post<Schedule>(`/api/doctor/clinics/${doctorClinicId}/exceptions`, { ...input, confirmCancel });

@@ -10,6 +10,8 @@ import {
   fetcher,
   keys,
   removeException,
+  saveMinutesPerPatient,
+  saveTokensPerHour,
   saveWeekly,
   type DoctorProfile,
   type ExceptionInput,
@@ -100,6 +102,11 @@ function Inner({ doctor }: { doctor: DoctorProfile }) {
         ) : (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
             <div className="flex min-w-0 flex-col gap-6">
+              <NumberSettingCard key={`m-${clinicId}-${data.minutesPerPatient}`} id="minutes-per-patient" value={data.minutesPerPatient} max={120}
+                title={t.schedule.minutesTitle} hint={t.schedule.minutesHint} label={t.schedule.minutesLabel} empty={t.schedule.minutesOff} error={t.schedule.minutesError}
+                onSave={async (n) => { done(await saveMinutesPerPatient(clinicId, n)); }} />
+              <TokensPerHourCard key={`${clinicId}-${data.tokensPerHour}`} value={data.tokensPerHour}
+                onSave={async (n) => { done(await saveTokensPerHour(clinicId, n)); }} />
               <WeeklyEditor key={`${clinicId}-${JSON.stringify(data.weekly)}`} weekly={data.weekly} onSave={(days) => change((c) => saveWeekly(clinicId, days, c))} />
               <ExceptionsCard
                 schedule={data}
@@ -134,6 +141,85 @@ function Inner({ doctor }: { doctor: DoctorProfile }) {
       />
       <Toasts toasts={toasts} onDismiss={(id) => setToasts((ts) => ts.filter((x) => x.id !== id))} />
     </div>
+  );
+}
+
+/** One optional number for the clinic, saved on its own (e.g. minutes per patient). */
+function NumberSettingCard({ id, value, max, title, hint, label, empty, error: errorText, onSave }: {
+  id: string; value: number | null; max: number; title: string; hint: string; label: string; empty: string; error: string;
+  onSave: (n: number | null) => Promise<void>;
+}) {
+  const [text, setText] = useState(value != null ? String(value) : "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const n = text ? Number(text) : null;
+
+  async function submit(ev: FormEvent) {
+    ev.preventDefault();
+    if (n != null && (n < 1 || n > max)) return setError(errorText);
+    setError("");
+    setBusy(true);
+    try {
+      await onSave(n);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t.common.loadError);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title={title}>
+      <p className="-mt-2 mb-4 text-sm text-muted">{hint}</p>
+      <form onSubmit={submit} noValidate className="flex flex-col gap-2">
+        <label htmlFor={id} className="font-semibold text-ink">{label}</label>
+        <div className="flex flex-wrap items-center gap-3">
+          <input id={id} inputMode="numeric" placeholder={empty} value={text} aria-invalid={error ? true : undefined}
+            onChange={(e) => setText(e.target.value.replace(/\D/g, "").slice(0, 3))}
+            className={`w-44 rounded-xl border-[1.5px] px-3 py-2.5 ${error ? "border-danger" : "border-line"}`} />
+          <button type="submit" disabled={busy || n === value} className={pill.primary}>{busy ? t.schedule.saving : t.schedule.perHourSave}</button>
+        </div>
+        {error && <p role="alert" className="text-sm font-medium text-danger">{error}</p>}
+      </form>
+    </Card>
+  );
+}
+
+function TokensPerHourCard({ value, onSave }: { value: number | null; onSave: (n: number | null) => Promise<void> }) {
+  const [text, setText] = useState(value != null ? String(value) : "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const n = text ? Number(text) : null;
+
+  async function submit(ev: FormEvent) {
+    ev.preventDefault();
+    if (n != null && (n < 1 || n > 60)) return setError(t.schedule.perHourError);
+    setError("");
+    setBusy(true);
+    try {
+      await onSave(n);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t.common.loadError);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title={t.schedule.perHourTitle}>
+      <p className="-mt-2 mb-4 text-sm text-muted">{t.schedule.perHourHint}</p>
+      <form onSubmit={submit} noValidate className="flex flex-col gap-2">
+        <label htmlFor="per-hour" className="font-semibold text-ink">{t.schedule.perHourLabel}</label>
+        <div className="flex flex-wrap items-center gap-3">
+          <input id="per-hour" inputMode="numeric" placeholder={t.schedule.perHourOff} value={text} aria-invalid={error ? true : undefined}
+            aria-describedby="per-hour-help" onChange={(e) => setText(e.target.value.replace(/\D/g, "").slice(0, 2))}
+            className={`w-40 rounded-xl border-[1.5px] px-3 py-2.5 ${error ? "border-danger" : "border-line"}`} />
+          <button type="submit" disabled={busy || n === value} className={pill.primary}>{busy ? t.schedule.saving : t.schedule.perHourSave}</button>
+        </div>
+        <p id="per-hour-help" className="text-sm text-muted">{n != null && n >= 1 && n <= 60 ? t.schedule.perHourExample(n) : null}</p>
+        {error && <p role="alert" className="text-sm font-medium text-danger">{error}</p>}
+      </form>
+    </Card>
   );
 }
 

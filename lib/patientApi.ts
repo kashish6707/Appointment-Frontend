@@ -215,7 +215,11 @@ export type BookingDay = {
   left: number | null;
   bookable: boolean;
   reason: "NOT_AVAILABLE" | "HOURS_OVER" | "FULL" | null;
+  /** When the clinic limits tokens per hour: the hours to choose from. Empty otherwise. */
+  hours?: BookingHour[];
 };
+
+export type BookingHour = { start: string; end: string; capacity: number; left: number; bookable: boolean; over: boolean };
 
 export type Availability = {
   doctorClinicId: string;
@@ -234,6 +238,8 @@ export type NewBooking = {
   recordsConsent: boolean;
   /** Token updates on WhatsApp at the patient's number, in this language. */
   whatsapp?: boolean;
+  /** The hour chosen ("10:00"), when the clinic limits tokens per hour. */
+  slotStart?: string;
   lang?: "en" | "hi";
 };
 
@@ -253,10 +259,15 @@ export type Tracking = {
   sessionStatus: SessionStatus | null;
   breakUntil?: string | null;
   date: string;
+  /** The doctor's OPD at this clinic, to look up other days. */
+  doctorClinicId?: string;
   doctorName: string;
   clinicName: string;
   opdStart: string;
   opdEnd?: string;
+  /** The hour the patient chose, when the clinic limits tokens per hour. */
+  slotStart?: string | null;
+  slotEnd?: string | null;
   dayNote?: string | null;
   messages?: { kind: string; text: string; createdAt: string }[];
 };
@@ -277,6 +288,11 @@ export function getTracking(bookingId: string, code: string): Promise<Tracking> 
 
 export function cancelBooking(bookingId: string, code: string): Promise<{ status: string }> {
   return request(`/api/public/bookings/${encodeURIComponent(bookingId)}/cancel`, { method: "POST", body: JSON.stringify({ code }) }, BOOKING_FALLBACKS);
+}
+
+/** Move a waiting token to another day: a new token on that day, and this one cancelled. */
+export function rescheduleBooking(bookingId: string, code: string, date: string, slotStart?: string): Promise<{ bookingId: string; token: number; trackingCode: string; date: string }> {
+  return request(`/api/public/bookings/${encodeURIComponent(bookingId)}/reschedule`, { method: "POST", body: JSON.stringify({ code, date, ...(slotStart ? { slotStart } : {}) }) }, BOOKING_FALLBACKS);
 }
 
 /** The link a patient opens to follow their token. Works on any device: the code is the key. */
