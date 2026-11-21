@@ -33,3 +33,9 @@ export function dashboardSocket(): Socket {
     },
   });
 }
+
+/** For patients browsing clinics: public live queue status of these doctor-clinic slots. */
+export function liveSocket(doctorClinicIds: string[]): Socket {
+  const opts = { path: PATH, addTrailingSlash: false, auth: { watch: doctorClinicIds }, reconnectionDelayMax: 10_000 };
+  return REALTIME_URL ? io(REALTIME_URL, opts) : io(opts);
+}

@@ -8,6 +8,7 @@ import { useLang } from "@/lib/i18n/LanguageProvider";
 import { shortTime } from "@/lib/time";
 import { OpdStatusText } from "./ClinicTile";
 import { ChevronLeft, ClockIcon, DirectionsIcon, PhoneIcon } from "./icons";
+import LiveQueue from "./LiveQueue";
 import { Avatar, ClinicPlaceholder } from "./Pictures";
 
 export default function ClinicScreen({ id }: { id: string }) {
@@ -169,6 +170,7 @@ function DoctorRow({ doctor: d }: { doctor: DoctorCard }) {
             {[d.degree, d.experienceYears != null ? t.clinic.experience(d.experienceYears) : null].filter(Boolean).join(" · ")}
           </p>
           {d.registrationNo && <p className="mt-0.5 text-sm text-muted">{t.tile.regNo(d.registrationNo)}</p>}
+          <LiveQueue doctor={d} className="mt-2" />
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-line pt-3">

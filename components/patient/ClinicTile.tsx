@@ -6,6 +6,7 @@ import type { ClinicCard, OpdStatus } from "@/lib/patientApi";
 import { useLang } from "@/lib/i18n/LanguageProvider";
 import { shortTime } from "@/lib/time";
 import { ChevronLeft, ChevronRight } from "./icons";
+import LiveQueue from "./LiveQueue";
 import { Avatar, ClinicPlaceholder } from "./Pictures";
 
 export function OpdStatusText({ status, opensAt, className = "" }: { status: OpdStatus; opensAt: string | null; className?: string }) {
@@ -90,9 +91,9 @@ export default function ClinicTile({ clinic }: { clinic: ClinicCard }) {
               role="group"
               aria-roledescription="slide"
               aria-label={t.tile.slideOf(i + 2, slideCount)}
-              className="flex h-[230px] w-full shrink-0 snap-start flex-col items-center justify-center gap-1.5 bg-brand-tint px-5 text-center"
+              className="flex h-[230px] w-full shrink-0 snap-start flex-col items-center justify-center gap-1 bg-brand-tint px-5 text-center"
             >
-              <Avatar name={d.name} initials={d.initials} photoUrl={d.photoUrl} size={68} />
+              <Avatar name={d.name} initials={d.initials} photoUrl={d.photoUrl} size={56} />
               {d.registrationNo && (
                 <span className="rounded-full border border-line bg-white px-2.5 py-0.5 text-xs font-semibold text-muted">{t.tile.regNo(d.registrationNo)}</span>
               )}
@@ -100,6 +101,7 @@ export default function ClinicTile({ clinic }: { clinic: ClinicCard }) {
               <p className="text-[15px] font-semibold leading-snug text-brand-dark">{d.designation || d.department}</p>
               {d.degree && <p className="line-clamp-1 text-sm text-muted">{d.degree}</p>}
               <p className="text-[15px] font-bold text-ink">{t.tile.fee(d.fee)}</p>
+              <LiveQueue doctor={d} />
             </div>
           ))}
         </div>

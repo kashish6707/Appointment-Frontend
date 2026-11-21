@@ -29,6 +29,13 @@ const en = {
     placeholder: "Search clinic, doctor or hospital",
     clear: "Clear search",
   },
+  live: {
+    seeing: (n: number) => `Now seeing token ${n}`,
+    running: "OPD running",
+    onBreak: "Doctor on a break",
+    closed: "OPD closed for today",
+    waiting: (n: number) => `${n} waiting`,
+  },
   departments: {
     title: "Departments",
     all: "All",
@@ -439,6 +446,13 @@ const hi: PatientStrings = {
     label: "क्लिनिक, डॉक्टर या अस्पताल खोजें",
     placeholder: "क्लिनिक, डॉक्टर या अस्पताल खोजें",
     clear: "खोज साफ़ करें",
+  },
+  live: {
+    seeing: (n) => `अभी टोकन ${n} देखा जा रहा है`,
+    running: "ओपीडी चल रही है",
+    onBreak: "डॉक्टर ब्रेक पर हैं",
+    closed: "आज की ओपीडी बंद",
+    waiting: (n) => `${n} इंतज़ार में`,
   },
   departments: {
     title: "विभाग",

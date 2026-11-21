@@ -43,6 +43,9 @@ export type DoctorCard = {
   waitingToday?: number | null;
   opensAt?: string | null;
   opdStatus?: OpdStatus;
+  /** Today's OPD (NOT_STARTED, IN_OPD, ON_BREAK, CLOSED) and the token with the doctor; live. */
+  sessionStatus?: string | null;
+  withDoctor?: number | null;
 };
 
 export type ClinicCard = {
