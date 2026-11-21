@@ -8,7 +8,7 @@ import { useLang } from "@/lib/i18n/LanguageProvider";
 import { shortTime } from "@/lib/time";
 import { OpdStatusText } from "./ClinicTile";
 import { ChevronLeft, ClockIcon, DirectionsIcon, PhoneIcon } from "./icons";
-import { Avatar, ClinicArt } from "./Pictures";
+import { Avatar, ClinicPlaceholder } from "./Pictures";
 
 export default function ClinicScreen({ id }: { id: string }) {
   const { t, lang } = useLang();
@@ -89,7 +89,7 @@ export default function ClinicScreen({ id }: { id: string }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={clinic.coverPhoto.large} alt="" className="h-full w-full object-cover" />
         ) : (
-          <ClinicArt colour={clinic.coverColour} type={clinic.type} />
+          <ClinicPlaceholder departmentKey={clinic.departments[0]?.key} type={clinic.type} colour={clinic.coverColour} />
         )}
         {backButton}
       </div>

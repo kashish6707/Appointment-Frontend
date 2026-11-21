@@ -6,7 +6,7 @@ import type { ClinicCard, OpdStatus } from "@/lib/patientApi";
 import { useLang } from "@/lib/i18n/LanguageProvider";
 import { shortTime } from "@/lib/time";
 import { ChevronLeft, ChevronRight } from "./icons";
-import { Avatar, ClinicArt } from "./Pictures";
+import { Avatar, ClinicPlaceholder } from "./Pictures";
 
 export function OpdStatusText({ status, opensAt, className = "" }: { status: OpdStatus; opensAt: string | null; className?: string }) {
   const { t } = useLang();
@@ -72,7 +72,7 @@ export default function ClinicTile({ clinic }: { clinic: ClinicCard }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={clinic.coverPhotoUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
             ) : (
-              <ClinicArt colour={clinic.coverColour} type={clinic.type} />
+              <ClinicPlaceholder departmentKey={clinic.departmentKeys[0]} type={clinic.type} colour={clinic.coverColour} />
             )}
             <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-sm font-semibold text-brand-dark shadow-soft">
               {clinic.type === "HOSPITAL" ? t.tile.hospital : t.tile.clinic}
