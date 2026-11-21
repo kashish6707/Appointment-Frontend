@@ -268,6 +268,8 @@ export type Tracking = {
   clinicName: string;
   opdStart: string;
   opdEnd?: string;
+  /** Updates on WhatsApp: ON, OFF (not asked for / no number) or FAILED (couldn't reach the number). */
+  whatsapp?: "ON" | "OFF" | "FAILED";
   /** The hour the patient chose, when the clinic limits tokens per hour. */
   slotStart?: string | null;
   slotEnd?: string | null;

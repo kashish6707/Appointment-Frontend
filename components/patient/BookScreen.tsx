@@ -276,6 +276,9 @@ export default function BookScreen({ doctorClinicId }: { doctorClinicId: string 
               <span className="mt-0.5 block text-sm text-muted">{t.book.whatsappHint}</span>
             </span>
           </label>
+          {!whatsapp && (
+            <p role="status" className="-mt-2 rounded-2xl border border-[#F2C7A2] bg-[#FFF4DE] px-3.5 py-3 text-[15px] text-[#7A4B00]">{t.book.noWhatsapp}</p>
+          )}
           <label className="flex cursor-pointer items-start gap-3 text-[15px] text-ink">
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-brand" />
             {t.book.consent}

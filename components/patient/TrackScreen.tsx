@@ -191,6 +191,13 @@ export default function TrackScreen({ bookingId, code }: { bookingId: string; co
           <AlertButton />
         )}
 
+        {active && waiting && (data.whatsapp === "OFF" || data.whatsapp === "FAILED") && (
+          <div role="status" className="rounded-[22px] border border-[#F2C7A2] bg-[#FFF4DE] px-5 py-4 text-[#7A4B00]">
+            <p className="font-bold">{data.whatsapp === "FAILED" ? t.track.whatsappFailedTitle : t.track.noWhatsappTitle}</p>
+            <p className="mt-1 text-[15px]">{t.track.noWhatsappBody}</p>
+          </div>
+        )}
+
         {active && (
           <p className="flex items-center justify-center gap-2 text-sm text-muted">
             <span className={`h-2.5 w-2.5 rounded-full ${connected ? "bg-brand motion-safe:animate-pulse" : "bg-[#C98A00]"}`} aria-hidden="true" />
